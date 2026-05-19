@@ -32,17 +32,21 @@ export default {
     });
   },
 
-  createAudioElement(audio) {
-    if (this.audio) {
-      this.audio.pause();
-      this.audio.src = "";
-      this.audio.load();
-    }
+createAudioElement(audio) {
+  if (this.audio) {
+    this.audio.onerror = null;
+    this.audio.onended = null;
+    this.audio.onloadedmetadata = null;
+    this.audio.ontimeupdate = null;
 
-    this.audio = new Audio(audio);
-    this.audio.preload = "metadata";
-    this.audio.volume = Number(this.volumeControl.value || 100) / 100;
-  },
+    this.audio.pause();
+    this.audio.removeAttribute("src");
+  }
+
+  this.audio = new Audio(audio);
+  this.audio.preload = "metadata";
+  this.audio.volume = Number(this.volumeControl.value || 100) / 100;
+}
 
   bindStaticActions() {
     this.playButton.onclick = () => this.togglePlayPause();

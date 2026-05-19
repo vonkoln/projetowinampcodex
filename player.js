@@ -109,27 +109,33 @@ export default {
     this.seekbar.value = Math.floor(this.audio.currentTime || 0);
   },
 
-  update() {
-    this.currentAudio = this.audioData[this.currentPlaying];
+ update() {
+  this.currentAudio = this.audioData[this.currentPlaying];
 
-    if (!this.currentAudio) {
-      this.showStatus("Nenhuma faixa encontrada.");
-      return;
-    }
+  this.cover.style.background = `url('${path(
+    this.currentAudio.cover
+  )}') no-repeat center center / cover`;
 
-    this.cover.style.background = `url("${path(this.currentAudio.cover)}") no-repeat center center / cover`;
-    this.title.textContent = this.currentAudio.title;
-    this.artist.textContent = this.currentAudio.artist;
-    this.nowPlayingCategory.textContent = this.currentAudio.category;
+  this.title.textContent = this.currentAudio.title;
+  this.artist.textContent = this.currentAudio.artist;
 
-    elements.createAudioElement.call(this, path(this.currentAudio.file));
-    elements.bindAudioActions.call(this);
+  this.currentDuration.textContent = "00:00";
+  this.totalDuration.textContent = "00:00";
+  this.seekbar.value = 0;
+  this.seekbar.max = 0;
 
-    this.setVolume(this.volumeControl.value);
-    this.highlightCurrentTrack();
+  elements.createAudioElement.call(this, path(this.currentAudio.file));
 
-    localStorage.setItem(STORAGE_KEYS.currentTrack, String(this.currentPlaying));
-  },
+  this.audio.onloadedmetadata = () => {
+    this.seekbar.max = Math.floor(this.audio.duration || 0);
+    this.totalDuration.textContent = secondsToMinutes(this.audio.duration || 0);
+    elements.actions.call(this);
+  };
+
+  this.audio.onerror = () => {
+    console.warn("Erro ao carregar faixa:", this.currentAudio.file);
+  };
+},
 
   populateCategories() {
     const categories = [...new Set(this.audioData.map((audio) => audio.category))];
