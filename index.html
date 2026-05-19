@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <meta
+    name="description"
+    content="O melhor do underground, freestyle, electro, house e dance music que tocou nas danceterias de Belo Horizonte e São Paulo nos anos 90 e início dos anos 2000."
+  />
+  <meta name="theme-color" content="#080b1a" />
+
+  <title>HippoDromo BH Anos 90 | Só as Brabas</title>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <main class="page-shell">
+    <section class="hero" aria-labelledby="site-title">
+      <p class="eyebrow">Arquivo sonoro da cena underground BH/SP</p>
+      <h1 id="site-title">HippoDromo BH Anos 90</h1>
+      <p class="hero-description">
+        Uma rádio nostálgica com clássicos de pista, freestyle, electro, house e underground que marcaram as danceterias.
+      </p>
+    </section>
+
+    <section class="player-layout">
+      <aside class="playlist-panel" aria-label="Busca e playlist">
+        <div class="panel-header">
+          <h2>Playlist</h2>
+          <span id="playlist-count">0 faixas</span>
+        </div>
+
+        <label class="field-label" for="search-input">Buscar música ou artista</label>
+        <input id="search-input" type="search" placeholder="Ex: Josh Wink, Freestyle..." autocomplete="off" />
+
+        <label class="field-label" for="category-filter">Categoria</label>
+        <select id="category-filter">
+          <option value="all">Todas as categorias</option>
+        </select>
+
+        <ul id="playlist" class="playlist"></ul>
+      </aside>
+
+      <section id="player" aria-label="Player de músicas anos 90">
+        <div class="player-topline">
+          <i class="material-icons" aria-hidden="true">equalizer</i>
+          <span id="now-playing-category">Underground BH</span>
+        </div>
+
+        <div class="card">
+          <div class="card-image">
+            <button class="btn-floating btn-large halfway-fab" id="play-button" type="button" aria-label="Tocar ou pausar música">
+              <i class="material-icons" id="play-pause">play_arrow</i>
+            </button>
+          </div>
+
+          <div class="card-content">
+            <h2 id="track-title">Title</h2>
+            <p class="artist" id="track-artist">Artist</p>
+
+            <div class="time-row">
+              <span id="current-duration">00:00</span>
+              <input type="range" min="0" max="0" id="seekbar" step="1" aria-label="Progresso da música" />
+              <span id="total-duration">00:00</span>
+            </div>
+
+            <div class="volume-row">
+              <button id="volume-button" type="button" aria-label="Ativar ou desativar volume">
+                <i class="material-icons" id="volume-icon">volume_up</i>
+              </button>
+
+              <input type="range" min="0" max="100" id="volume-control" step="1" aria-label="Controle de volume" />
+            </div>
+          </div>
+
+          <div class="change-tracks">
+            <button class="btn-floating btn-large" id="previous-track" type="button" aria-label="Música anterior">
+              <i class="material-icons">skip_previous</i>
+            </button>
+
+            <button class="btn-floating btn-large" id="next-track" type="button" aria-label="Próxima música">
+              <i class="material-icons">skip_next</i>
+            </button>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="index.js" type="module"></script>
+</body>
+</html>
