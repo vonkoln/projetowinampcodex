@@ -46,7 +46,7 @@ createAudioElement(audio) {
   this.audio = new Audio(audio);
   this.audio.preload = "metadata";
   this.audio.volume = Number(this.volumeControl.value || 100) / 100;
-}
+},
 
   bindStaticActions() {
     this.playButton.onclick = () => this.togglePlayPause();
