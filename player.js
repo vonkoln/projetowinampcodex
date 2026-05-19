@@ -14,14 +14,15 @@ export default {
   currentPlaying: 0,
   isPlaying: false,
 
-  start() {
-    elements.get.call(this);
-    this.restoreState();
-    this.populateCategories();
-    this.renderPlaylist();
-    elements.bindStaticActions.call(this);
-    this.update();
-  },
+ start() {
+  elements.get.call(this);
+
+  this.volumeControl.value = 100;
+
+  elements.bindStaticActions.call(this);
+
+  this.update();
+},
 
   restoreState() {
     const savedVolume = Number(localStorage.getItem(STORAGE_KEYS.volume));
@@ -129,7 +130,7 @@ export default {
   this.audio.onloadedmetadata = () => {
     this.seekbar.max = Math.floor(this.audio.duration || 0);
     this.totalDuration.textContent = secondsToMinutes(this.audio.duration || 0);
-    elements.actions.call(this);
+    elements.bindAudioActions.call(this);
   };
 
   this.audio.onerror = () => {
