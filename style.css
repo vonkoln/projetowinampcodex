@@ -2,17 +2,35 @@
   --primary: #3b2e93;
   --background: #0c1123;
   --player-bg: #ffffff;
+  --text-dark: #151827;
+  --text-muted: #6b7280;
+  --border-soft: rgba(255, 255, 255, 0.12);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  min-height: 100%;
+}
+
 body {
+  min-height: 100vh;
   background: var(--background);
   margin: 0;
   padding: 0;
-  font-family: 'Roboto', Arial, sans-serif;
+  font-family: "Roboto", Arial, sans-serif;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
+
+button {
+  border: 0;
 }
 
 .container {
@@ -62,123 +80,6 @@ body {
   opacity: 0.9;
 }
 
-/* ========================= */
-/* FILTROS */
-/* ========================= */
-
-.filter-panel {
-  width: 100%;
-  margin-bottom: 14px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  display: grid;
-  gap: 10px;
-}
-
-#search-input,
-#category-filter.browser-default {
-  width: 100%;
-  height: 38px;
-  margin: 0;
-  padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 10px;
-  background: #ffffff;
-  color: #1f2937;
-  font-size: 14px;
-  outline: none;
-}
-
-#search-input:focus,
-#category-filter.browser-default:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(59, 46, 147, 0.18);
-}
-
-.playlist-count {
-  color: #ffffff;
-  font-size: 12px;
-  text-align: center;
-  opacity: 0.88;
-}
-
-/* ========================= */
-/* INFORMAÇÕES DO PLAYER */
-/* ========================= */
-
-.classic-artist,
-.classic-category,
-.player-status {
-  margin: 0;
-  text-align: center;
-}
-
-.classic-artist {
-  padding: 0 12px 4px;
-  color: #374151;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.classic-category {
-  padding: 0 12px 12px;
-  color: #6b7280;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .6px;
-}
-
-.player-status {
-  min-height: 18px;
-  margin-top: 8px;
-  color: #b91c1c;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.volume-button {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-body.theme-winamp .filter-panel {
-  background: #2b2d44;
-  border: 1px solid #0a0b12;
-  border-radius: 0;
-  box-shadow:
-    inset 1px 1px 0 #7680a8,
-    inset -1px -1px 0 #121522,
-    0 0 0 1px #3f4564;
-}
-
-body.theme-winamp #search-input,
-body.theme-winamp #category-filter.browser-default {
-  height: 24px;
-  border-radius: 0;
-  border: 1px solid #000;
-  background: #111414;
-  color: #00ff66;
-  font-family: "Courier New", monospace;
-  font-size: 12px;
-  box-shadow:
-    inset 1px 1px 0 #59615c,
-    inset -1px -1px 0 #000;
-}
-
-body.theme-winamp .playlist-count {
-  color: #f4d870;
-  font-family: Tahoma, Arial, sans-serif;
-}
-
-
 .lamp-switch {
   position: relative;
   width: 64px;
@@ -195,11 +96,11 @@ body.theme-winamp .playlist-count {
   inset: 0;
   border-radius: 999px;
   background: linear-gradient(145deg, #161c31, #070b18);
-  border: 1px solid rgba(255,255,255,0.16);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   box-shadow:
-    inset 0 2px 6px rgba(0,0,0,0.65),
-    0 0 12px rgba(0,0,0,0.35);
-  transition: .3s ease;
+    inset 0 2px 6px rgba(0, 0, 0, 0.65),
+    0 0 12px rgba(0, 0, 0, 0.35);
+  transition: 0.3s ease;
 }
 
 .lamp-bulb {
@@ -211,30 +112,80 @@ body.theme-winamp .playlist-count {
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #ffffff, #cfd5ff 45%, #6a71be);
   box-shadow:
-    0 0 6px rgba(255,255,255,.35),
-    inset -2px -2px 4px rgba(0,0,0,.35);
-  transition: .3s ease;
+    0 0 6px rgba(255, 255, 255, 0.35),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.35);
+  transition: 0.3s ease;
 }
 
 .lamp-switch input:checked + .lamp-track {
   background: linear-gradient(145deg, #ffbd2e, #ff8f00);
   box-shadow:
-    0 0 14px rgba(255,180,0,.65),
-    inset 0 1px 2px rgba(255,255,255,.35);
+    0 0 14px rgba(255, 180, 0, 0.65),
+    inset 0 1px 2px rgba(255, 255, 255, 0.35);
 }
 
 .lamp-switch input:checked + .lamp-track .lamp-bulb {
   left: 35px;
   background: radial-gradient(circle at 35% 30%, #fff7bf, #ffd54f 45%, #ff9800);
   box-shadow:
-    0 0 18px rgba(255,196,0,.95),
-    0 0 28px rgba(255,138,0,.45),
-    inset -2px -2px 4px rgba(0,0,0,.25);
+    0 0 18px rgba(255, 196, 0, 0.95),
+    0 0 28px rgba(255, 138, 0, 0.45),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.25);
 }
 
-/* ========================= */
+/* ========================================================= */
+/* PAINEL DE BUSCA / FILTRO */
+/* ========================================================= */
+
+.filter-panel {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto 16px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+#search-input,
+#category-filter {
+  width: 100%;
+  height: 42px;
+  margin-bottom: 10px;
+  padding: 0 12px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  outline: none;
+}
+
+#search-input::placeholder {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+#category-filter {
+  display: block;
+  appearance: auto;
+  color: #ffffff;
+}
+
+#category-filter option {
+  color: #111827;
+}
+
+#playlist-count {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  opacity: 0.9;
+}
+
+/* ========================================================= */
 /* PLAYER CLÁSSICO */
-/* ========================= */
+/* ========================================================= */
 
 #player {
   background-color: var(--player-bg);
@@ -242,9 +193,9 @@ body.theme-winamp .playlist-count {
   max-width: 400px;
   margin: 0 auto;
   box-shadow:
-    0px 2px 2px rgba(0, 0, 0, 0.12),
-    0px 3px 1px -2px rgba(0, 0, 0, 0.12),
-    0px 1px 5px rgba(0, 0, 0, 0.2);
+    0 2px 2px rgba(0, 0, 0, 0.12),
+    0 3px 1px -2px rgba(0, 0, 0, 0.12),
+    0 1px 5px rgba(0, 0, 0, 0.2);
 }
 
 .card {
@@ -252,17 +203,37 @@ body.theme-winamp .playlist-count {
   margin: 0;
 }
 
+#classic-title,
 h4 {
   color: var(--primary);
   font-size: 20px;
   font-weight: bold;
   margin: 0;
-  padding: 12px;
+  padding: 12px 12px 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  min-height: 54px;
+  min-height: 44px;
+}
+
+#classic-artist {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 12px 6px;
+}
+
+#now-playing-category {
+  display: table;
+  margin: 0 auto 10px;
+  padding: 3px 10px;
+  color: #ffffff;
+  background: var(--primary);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .card-image {
@@ -275,8 +246,12 @@ audio {
   display: none;
 }
 
+.card-content {
+  padding: 18px;
+}
+
 .classic-time-row {
-  margin-top: 8px;
+  margin-top: 2px;
   display: flex;
   justify-content: space-between;
   color: #555;
@@ -303,10 +278,45 @@ audio {
   margin: 0 6px;
 }
 
+.change-tracks {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 12px;
+}
+
 #volume-icon {
   color: var(--primary);
   transform: translateY(3px);
-  user-select: none;
+  cursor: pointer;
+}
+
+#volume-button {
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+#volume {
+  flex: 1;
+}
+
+#player-status {
+  min-height: 18px;
+  margin-top: 8px;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+input[type="range"] {
+  cursor: pointer;
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -321,75 +331,205 @@ input[type="range"]::-ms-thumb {
   background-color: var(--primary);
 }
 
-.change-tracks {
-  margin-top: 20px;
-  margin-bottom: 10px;
-  display: flex;
-  justify-content: space-evenly;
-  align-items: center;
-  gap: 12px;
-}
-
-/* ========================= */
-/* PLAYER WINAMP */
-/* ========================= */
+/* ========================================================= */
+/* WINAMP — BASE 2.91 UI REFINADO */
+/* ========================================================= */
 
 .winamp-shell {
   display: none;
 }
 
 body.theme-winamp {
+  --wa-width: 275px;
+
+  --wa-bg-dark: #181829;
+  --wa-bg-base: #292940;
+  --wa-bg-mid: #383858;
+  --wa-bg-light: #39395a;
+
+  --wa-black: #080810;
+  --wa-black-2: #0b0f16;
+
+  --wa-border-bright: #bfcdd3;
+  --wa-border-mid: #798a9e;
+  --wa-border-soft: #4a5a6b;
+  --wa-border-dark: #000000;
+
+  --wa-title: #ecce7a;
+  --wa-title-shadow: #302310;
+
+  --wa-green: #00ff45;
+  --wa-green-soft: #9dff6e;
+  --wa-lime: #cfff44;
+
+  --wa-button-top: #edffff;
+  --wa-button-mid: #adb4c4;
+  --wa-button-bottom: #4a5a6b;
+
+  --wa-slider-gold: #e1c95c;
+  --wa-slider-dark: #211b0a;
+
   background:
-    radial-gradient(circle at top, rgba(255, 208, 94, 0.08), transparent 30%),
-    linear-gradient(180deg, #11131d 0%, #171b2a 100%);
+    radial-gradient(circle at top, rgba(236, 206, 122, 0.05), transparent 32%),
+    linear-gradient(180deg, #10131d 0%, #171a29 100%);
   font-family: Tahoma, Arial, sans-serif;
 }
 
 body.theme-winamp .container {
   background:
-    radial-gradient(circle at top, rgba(255, 208, 94, 0.08), transparent 30%),
-    linear-gradient(180deg, #11131d 0%, #171b2a 100%);
-}
-
-body.theme-winamp .main-content {
-  align-items: flex-start;
-  padding-top: 24px;
+    radial-gradient(circle at top, rgba(236, 206, 122, 0.05), transparent 32%),
+    linear-gradient(180deg, #10131d 0%, #171a29 100%);
 }
 
 body.theme-winamp #player {
   display: none;
 }
 
-body.theme-winamp .winamp-shell {
-  display: block;
-  width: 100%;
-  max-width: 360px;
-  margin: 0 auto;
+body.theme-winamp .filter-panel,
+body.theme-winamp .search-panel,
+body.theme-winamp .library-panel,
+body.theme-winamp .player-library,
+body.theme-winamp .playlist-tools {
+  display: none !important;
 }
 
-body.theme-winamp .wa-window {
-  background: #2b2d44;
-  border: 1px solid #0a0b12;
-  box-shadow:
-    inset 1px 1px 0 #7680a8,
-    inset -1px -1px 0 #121522,
-    0 0 0 1px #3f4564;
+body.theme-winamp .main-content {
+  align-items: flex-start;
+  padding-top: 12px;
+}
+
+body.theme-winamp .theme-wrapper,
+body.theme-winamp .winamp-shell {
+  width: var(--wa-width);
+  max-width: var(--wa-width);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+body.theme-winamp .winamp-shell {
+  display: block;
+}
+
+body.theme-winamp .layout-theme-area {
   margin-bottom: 8px;
+  gap: 8px;
+}
+
+body.theme-winamp .theme-label {
+  color: var(--wa-title);
+  font-size: 11px;
+  font-weight: 700;
+  text-shadow: 1px 1px 0 #000;
+}
+
+body.theme-winamp .lamp-switch {
+  width: 48px;
+  height: 22px;
+}
+
+body.theme-winamp .lamp-track {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 40%),
+    linear-gradient(180deg, #3a3550, #1b1b2d);
+  border: 1px solid #000;
+  box-shadow:
+    inset 1px 1px 0 var(--wa-border-mid),
+    inset -1px -1px 0 #000;
+}
+
+body.theme-winamp .lamp-bulb {
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle at 35% 30%, #fff6a8, #e0a018 50%, #8a4c00);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.65),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.65),
+    0 0 8px rgba(236, 206, 122, 0.45);
+}
+
+body.theme-winamp .lamp-switch input:checked + .lamp-track .lamp-bulb {
+  left: 27px;
+}
+
+/* ========================================================= */
+/* JANELAS WINAMP */
+/* ========================================================= */
+
+body.theme-winamp .wa-window {
+  position: relative;
+  width: var(--wa-width);
+  margin: 0 0 4px 0;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.025) 0,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 28%),
+    linear-gradient(180deg, var(--wa-bg-light), var(--wa-bg-base));
+  border: 1px solid var(--wa-border-dark);
+  box-shadow:
+    inset 1px 1px 0 var(--wa-border-bright),
+    inset -1px -1px 0 #0c0d16,
+    0 0 0 1px #202238;
+}
+
+body.theme-winamp .wa-window::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 2px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.32);
+  z-index: 2;
+  pointer-events: none;
+}
+
+body.theme-winamp .wa-window::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 2;
+  pointer-events: none;
 }
 
 body.theme-winamp .wa-titlebar {
-  height: 18px;
+  height: 14px;
+  padding: 0 3px 0 5px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 4px 0 6px;
-  font-size: 11px;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 9px;
+  line-height: 14px;
   font-weight: 700;
-  color: #f4d870;
-  letter-spacing: .4px;
+  letter-spacing: 0.45px;
+  color: var(--wa-title);
   text-transform: uppercase;
-  background: linear-gradient(180deg, #3b4468 0%, #242944 60%, #1b1d33 100%);
-  border-bottom: 1px solid #0a0b12;
+  text-shadow: 1px 1px 0 var(--wa-title-shadow);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.07) 0,
+      rgba(255, 255, 255, 0.07) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    linear-gradient(180deg, #464a68 0%, #31344f 48%, #20233a 100%);
+  border-bottom: 1px solid #080810;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55);
   user-select: none;
 }
 
@@ -399,72 +539,101 @@ body.theme-winamp .wa-title-buttons {
 }
 
 body.theme-winamp .wa-title-buttons span {
-  width: 9px;
-  height: 9px;
-  background: linear-gradient(180deg, #d3d7e7, #6c7398);
-  border: 1px solid #1a1d2f;
-  box-shadow: inset 1px 1px 0 #ffffff77;
+  width: 7px;
+  height: 7px;
+  background: linear-gradient(135deg, #ffffff 0%, #cfd6df 40%, #7b8494 100%);
+  border: 1px solid #080810;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.85),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* ========================================================= */
+/* MAIN PLAYER */
+/* ========================================================= */
+
+body.theme-winamp .wa-main-player {
+  height: 116px;
 }
 
 body.theme-winamp .wa-main-body {
-  padding: 8px;
-  background: linear-gradient(180deg, #2a2e45, #24273d);
+  height: 101px;
+  padding: 7px 7px 6px;
+  background:
+    radial-gradient(circle at 24% 22%, rgba(255, 255, 255, 0.06), transparent 18%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), transparent 30%),
+    linear-gradient(180deg, #383858 0%, #292940 100%);
 }
 
 body.theme-winamp .wa-top-row {
   display: grid;
-  grid-template-columns: 60px 78px 1fr;
-  gap: 8px;
+  grid-template-columns: 64px 72px 1fr;
+  gap: 5px;
   align-items: start;
 }
 
 body.theme-winamp .wa-visualizer {
-  height: 58px;
-  background: #090b0f;
+  width: 64px;
+  height: 43px;
+  padding: 3px;
+  background:
+    linear-gradient(rgba(0, 255, 70, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 70, 0.08) 1px, transparent 1px),
+    #05070a;
+  background-size: 8px 8px;
   border: 1px solid #000;
   box-shadow:
-    inset 1px 1px 0 #4a4a4a,
+    inset 1px 1px 0 #5a6076,
     inset -1px -1px 0 #000;
-  padding: 4px;
-  display: flex;
-  align-items: flex-end;
 }
 
 body.theme-winamp .wa-bars {
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: end;
-  gap: 2px;
+  align-items: flex-end;
+  gap: 1px;
 }
 
 body.theme-winamp .wa-bars span {
-  width: 4px;
-  background: linear-gradient(180deg, #39ff14 0%, #00c853 100%);
-  box-shadow: 0 0 3px rgba(0,255,100,.35);
-  animation: wa-bars 1s infinite alternate ease-in-out;
+  width: 3px;
+  background:
+    linear-gradient(
+      180deg,
+      #f5ff5a 0%,
+      #b9ff3a 25%,
+      #39ff14 55%,
+      #00a83a 100%
+    );
+  box-shadow: 0 0 2px rgba(0, 255, 70, 0.45);
   transform-origin: bottom;
+  animation: wa-bars 1s infinite alternate ease-in-out;
 }
 
-body.theme-winamp .wa-bars span:nth-child(1) { height: 25%; animation-delay: .1s; }
-body.theme-winamp .wa-bars span:nth-child(2) { height: 45%; animation-delay: .3s; }
-body.theme-winamp .wa-bars span:nth-child(3) { height: 70%; animation-delay: .2s; }
-body.theme-winamp .wa-bars span:nth-child(4) { height: 35%; animation-delay: .5s; }
-body.theme-winamp .wa-bars span:nth-child(5) { height: 80%; animation-delay: .4s; }
-body.theme-winamp .wa-bars span:nth-child(6) { height: 20%; animation-delay: .6s; }
-body.theme-winamp .wa-bars span:nth-child(7) { height: 55%; animation-delay: .15s; }
-body.theme-winamp .wa-bars span:nth-child(8) { height: 60%; animation-delay: .45s; }
-body.theme-winamp .wa-bars span:nth-child(9) { height: 40%; animation-delay: .25s; }
-body.theme-winamp .wa-bars span:nth-child(10) { height: 78%; animation-delay: .35s; }
-body.theme-winamp .wa-bars span:nth-child(11) { height: 30%; animation-delay: .2s; }
-body.theme-winamp .wa-bars span:nth-child(12) { height: 52%; animation-delay: .4s; }
-body.theme-winamp .wa-bars span:nth-child(13) { height: 68%; animation-delay: .1s; }
-body.theme-winamp .wa-bars span:nth-child(14) { height: 36%; animation-delay: .55s; }
-body.theme-winamp .wa-bars span:nth-child(15) { height: 88%; animation-delay: .3s; }
+body.theme-winamp .wa-bars span:nth-child(1) { height: 25%; animation-delay: 0.1s; }
+body.theme-winamp .wa-bars span:nth-child(2) { height: 45%; animation-delay: 0.3s; }
+body.theme-winamp .wa-bars span:nth-child(3) { height: 70%; animation-delay: 0.2s; }
+body.theme-winamp .wa-bars span:nth-child(4) { height: 35%; animation-delay: 0.5s; }
+body.theme-winamp .wa-bars span:nth-child(5) { height: 80%; animation-delay: 0.4s; }
+body.theme-winamp .wa-bars span:nth-child(6) { height: 20%; animation-delay: 0.6s; }
+body.theme-winamp .wa-bars span:nth-child(7) { height: 55%; animation-delay: 0.15s; }
+body.theme-winamp .wa-bars span:nth-child(8) { height: 60%; animation-delay: 0.45s; }
+body.theme-winamp .wa-bars span:nth-child(9) { height: 40%; animation-delay: 0.25s; }
+body.theme-winamp .wa-bars span:nth-child(10) { height: 78%; animation-delay: 0.35s; }
+body.theme-winamp .wa-bars span:nth-child(11) { height: 30%; animation-delay: 0.2s; }
+body.theme-winamp .wa-bars span:nth-child(12) { height: 52%; animation-delay: 0.4s; }
+body.theme-winamp .wa-bars span:nth-child(13) { height: 68%; animation-delay: 0.1s; }
+body.theme-winamp .wa-bars span:nth-child(14) { height: 36%; animation-delay: 0.55s; }
+body.theme-winamp .wa-bars span:nth-child(15) { height: 88%; animation-delay: 0.3s; }
+
+body.theme-winamp .wa-bars.is-paused span {
+  animation-play-state: paused;
+  opacity: 0.45;
+}
 
 @keyframes wa-bars {
   from {
-    transform: scaleY(.45);
+    transform: scaleY(0.45);
   }
 
   to {
@@ -473,22 +642,29 @@ body.theme-winamp .wa-bars span:nth-child(15) { height: 88%; animation-delay: .3
 }
 
 body.theme-winamp .wa-time-display {
-  height: 58px;
+  width: 72px;
+  height: 43px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #111414;
+  overflow: hidden;
+  font-family: "Courier New", monospace;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: #caffcf;
+  background:
+    radial-gradient(circle at center, rgba(0, 255, 70, 0.08), transparent 65%),
+    #05070a;
   border: 1px solid #000;
   box-shadow:
-    inset 1px 1px 0 #59615c,
+    inset 1px 1px 0 #5a6076,
     inset -1px -1px 0 #000;
-  color: #00ff66;
-  font-size: 30px;
-  line-height: 1;
-  letter-spacing: 2px;
-  font-weight: 700;
-  font-family: "Courier New", monospace;
-  text-shadow: 0 0 6px rgba(0,255,100,.35);
+  text-shadow:
+    0 0 3px rgba(0, 255, 70, 0.9),
+    0 0 7px rgba(0, 255, 70, 0.38),
+    1px 1px 0 #001a08;
 }
 
 body.theme-winamp .wa-track-info {
@@ -496,17 +672,24 @@ body.theme-winamp .wa-track-info {
 }
 
 body.theme-winamp .wa-track-title {
-  height: 18px;
-  padding: 1px 6px;
-  margin-bottom: 6px;
-  color: #00ff66;
-  font-size: 11px;
+  height: 16px;
+  margin-bottom: 4px;
+  padding: 1px 4px;
+  color: #caffcf;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 10px;
+  line-height: 14px;
   font-weight: 700;
-  background: #111414;
+  background:
+    linear-gradient(180deg, rgba(0, 255, 70, 0.04), transparent),
+    #05070a;
   border: 1px solid #000;
   box-shadow:
-    inset 1px 1px 0 #59615c,
+    inset 1px 1px 0 #5a6076,
     inset -1px -1px 0 #000;
+  text-shadow:
+    0 0 3px rgba(0, 255, 70, 0.45),
+    1px 1px 0 #001a08;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -514,43 +697,50 @@ body.theme-winamp .wa-track-title {
 
 body.theme-winamp .wa-meta-row {
   display: flex;
-  gap: 5px;
   align-items: center;
-  margin-bottom: 7px;
-  flex-wrap: wrap;
-}
-
-body.theme-winamp .wa-meta-box,
-body.theme-winamp .wa-meta-text {
-  font-size: 10px;
-  font-weight: 700;
-  color: #cbd0e8;
+  gap: 3px;
+  margin-bottom: 5px;
+  flex-wrap: nowrap;
 }
 
 body.theme-winamp .wa-meta-box {
-  padding: 2px 4px;
-  background: #2d3147;
-  border: 1px solid #121522;
-  box-shadow: inset 1px 1px 0 #747da4;
+  height: 14px;
+  padding: 0 3px;
+  color: #ffffff;
+  font-size: 9px;
+  line-height: 12px;
+  font-weight: 700;
+  background: linear-gradient(180deg, #3d405e, #25283d);
+  border: 1px solid #0b0c14;
+  box-shadow:
+    inset 1px 1px 0 #858ba4,
+    inset -1px -1px 0 #10121e;
+}
+
+body.theme-winamp .wa-meta-text {
+  color: #d8dbe8;
+  font-size: 9px;
+  line-height: 12px;
+  font-weight: 700;
+  text-shadow: 1px 1px 0 #000;
 }
 
 body.theme-winamp .wa-meta-text.active {
-  color: #3cff59;
+  color: var(--wa-lime);
 }
 
 body.theme-winamp .wa-seek-row {
   display: flex;
-  gap: 6px;
+  gap: 5px;
 }
 
 body.theme-winamp .wa-seekbar,
 body.theme-winamp .wa-volumebar {
-  position: relative;
-  height: 10px;
-  background: #111318;
+  height: 8px;
+  background: linear-gradient(180deg, #11131d, #0a0b12);
   border: 1px solid #000;
   box-shadow:
-    inset 1px 1px 0 #454c68,
+    inset 1px 1px 0 #596078,
     inset -1px -1px 0 #000;
   cursor: pointer;
 }
@@ -560,18 +750,20 @@ body.theme-winamp .wa-seekbar {
 }
 
 body.theme-winamp .wa-volumebar {
-  width: 56px;
+  width: 42px;
 }
 
 body.theme-winamp .wa-seekbar span,
 body.theme-winamp .wa-volumebar span {
   position: absolute;
   top: 1px;
-  width: 10px;
-  height: 6px;
-  background: linear-gradient(180deg, #e5e7ef, #7d86b0);
-  border: 1px solid #1b1d2f;
-  box-shadow: inset 1px 1px 0 #ffffff88;
+  width: 8px;
+  height: 4px;
+  background: linear-gradient(180deg, #fff8bd 0%, #d9b94d 50%, #7c5e17 100%);
+  border: 1px solid var(--wa-slider-dark);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.75),
+    0 0 2px rgba(236, 206, 122, 0.35);
 }
 
 body.theme-winamp .wa-seekbar span {
@@ -583,44 +775,53 @@ body.theme-winamp .wa-volumebar span {
 }
 
 body.theme-winamp .wa-button-row {
-  margin-top: 10px;
+  margin-top: 7px;
+  gap: 3px;
   display: flex;
   align-items: center;
-  gap: 4px;
 }
 
 body.theme-winamp .wa-small-btn,
 body.theme-winamp .wa-mini-btn {
   cursor: pointer;
-  border: 1px solid #0d1020;
-  background: linear-gradient(180deg, #c4cbe0, #6c7398);
-  color: #12131d;
-  font-size: 10px;
+  color: #10131e;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 9px;
   font-weight: 700;
+  background: linear-gradient(180deg, var(--wa-button-top) 0%, var(--wa-button-mid) 48%, var(--wa-button-bottom) 100%);
+  border: 1px solid #080810;
   box-shadow:
-    inset 1px 1px 0 #ffffff99,
-    inset -1px -1px 0 #434a69;
+    inset 1px 1px 0 rgba(255, 255, 255, 0.85),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.48);
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 body.theme-winamp .wa-small-btn {
-  width: 24px;
+  width: 23px;
   height: 18px;
   padding: 0;
-  line-height: 16px;
+  line-height: 15px;
 }
 
 body.theme-winamp .wa-mini-btn {
-  min-width: 34px;
+  min-width: 31px;
   height: 18px;
-  padding: 0 6px;
-  line-height: 16px;
+  padding: 0 4px;
+  line-height: 15px;
+}
+
+body.theme-winamp .wa-small-btn:hover,
+body.theme-winamp .wa-mini-btn:hover {
+  filter: brightness(1.08);
 }
 
 body.theme-winamp .wa-small-btn:active,
 body.theme-winamp .wa-mini-btn:active {
+  background: linear-gradient(180deg, #5f6b84 0%, #aeb7c9 100%);
   box-shadow:
-    inset 1px 1px 0 #434a69,
-    inset -1px -1px 0 #ffffff55;
+    inset 1px 1px 0 rgba(0, 0, 0, 0.55),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.55);
+  transform: translateY(1px);
 }
 
 body.theme-winamp .wa-main-actions {
@@ -629,122 +830,160 @@ body.theme-winamp .wa-main-actions {
   gap: 4px;
 }
 
+/* ========================================================= */
 /* EQUALIZER */
+/* ========================================================= */
+
+body.theme-winamp .wa-eq {
+  height: 116px;
+}
 
 body.theme-winamp .wa-eq-body {
+  height: 101px;
   display: grid;
-  grid-template-columns: 58px 1fr 64px;
-  gap: 8px;
-  padding: 8px;
-  background: linear-gradient(180deg, #2a2e45, #24273d);
+  grid-template-columns: 46px 1fr 44px;
+  gap: 5px;
+  padding: 6px;
+  background:
+    linear-gradient(
+      180deg,
+      transparent 0 24px,
+      rgba(255, 255, 255, 0.12) 24px 25px,
+      transparent 25px 48px,
+      rgba(255, 255, 255, 0.12) 48px 49px,
+      transparent 49px
+    ),
+    radial-gradient(circle at 24% 22%, rgba(255, 255, 255, 0.06), transparent 18%),
+    linear-gradient(180deg, #383858 0%, #292940 100%);
 }
 
 body.theme-winamp .wa-toggle-row {
   display: flex;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: 3px;
+  margin-bottom: 4px;
 }
 
 body.theme-winamp .wa-mini-btn.on {
-  color: #1b4300;
-  background: linear-gradient(180deg, #b7ff8a, #6ed83f);
+  color: #1d3d00;
+  background: linear-gradient(180deg, #ffffbe 0%, #def95a 48%, #8fae20 100%);
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 body.theme-winamp .wa-preamp-label,
 body.theme-winamp .wa-preamp-bottom,
 body.theme-winamp .wa-band small {
-  color: #d6b94a;
-  font-size: 9px;
+  color: var(--wa-title);
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 8px;
+  line-height: 1;
   font-weight: 700;
-  text-align: center;
+  text-shadow: 1px 1px 0 #000;
 }
 
 body.theme-winamp .wa-preamp {
+  margin: 4px 0;
   display: flex;
   justify-content: center;
-  margin: 6px 0;
 }
 
 body.theme-winamp .wa-eq-bands {
   display: flex;
   justify-content: space-between;
-  gap: 4px;
   align-items: end;
+  gap: 2px;
 }
 
 body.theme-winamp .wa-band {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 body.theme-winamp .wa-slider.vertical {
   position: relative;
-  width: 8px;
-  height: 78px;
-  background: #151821;
+  width: 7px;
+  height: 57px;
+  background: linear-gradient(90deg, #0b0d14, #181b2a 48%, #080810);
   border: 1px solid #000;
   box-shadow:
-    inset 1px 1px 0 #555d7a,
+    inset 1px 1px 0 #596078,
     inset -1px -1px 0 #000;
 }
 
 body.theme-winamp .wa-slider.vertical::before {
   content: "";
   position: absolute;
-  left: 3px;
-  top: 0;
-  bottom: 0;
+  left: 2px;
+  top: 2px;
+  bottom: 2px;
   width: 1px;
-  background: #f1d24f;
+  background: var(--wa-slider-gold);
 }
 
 body.theme-winamp .wa-slider.vertical span {
   position: absolute;
   left: -3px;
-  top: 28px;
-  width: 14px;
-  height: 8px;
-  background: linear-gradient(180deg, #e3e7ef, #7d86b0);
-  border: 1px solid #1b1d2f;
-  box-shadow: inset 1px 1px 0 #ffffff77;
+  top: 23px;
+  width: 13px;
+  height: 7px;
+  background: linear-gradient(180deg, #ffffff 0%, #c6ccd8 45%, #747d98 100%);
+  border: 1px solid #080810;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.9),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.35);
 }
 
 body.theme-winamp .wa-eq-right {
   display: flex;
   justify-content: flex-end;
-  align-items: start;
+  align-items: flex-start;
 }
 
+/* ========================================================= */
 /* PLAYLIST */
+/* ========================================================= */
+
+body.theme-winamp .wa-playlist {
+  height: 232px;
+}
 
 body.theme-winamp .wa-playlist-body {
-  padding: 8px;
-  background: linear-gradient(180deg, #2a2e45, #24273d);
+  height: 217px;
+  padding: 6px;
+  background:
+    radial-gradient(circle at 24% 22%, rgba(255, 255, 255, 0.05), transparent 18%),
+    linear-gradient(180deg, #383858 0%, #292940 100%);
 }
 
 body.theme-winamp .wa-playlist-list {
+  height: 174px;
+  min-height: 174px;
+  max-height: 174px;
   margin: 0;
-  padding: 8px 10px;
+  padding: 5px 7px;
+  overflow-y: auto;
   list-style: none;
-  background: #030704;
+  background:
+    linear-gradient(180deg, rgba(0, 255, 70, 0.025), transparent),
+    #030704;
   border: 1px solid #000;
-  min-height: 190px;
   box-shadow:
-    inset 1px 1px 0 #39503b,
+    inset 1px 1px 0 #2f4a34,
     inset -1px -1px 0 #000;
 }
 
 body.theme-winamp .wa-playlist-list li {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
-  color: #00ff66;
-  font-size: 12px;
-  line-height: 1.55;
+  gap: 7px;
+  color: var(--wa-green);
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1.45;
   white-space: nowrap;
   cursor: pointer;
+  text-shadow: 1px 1px 0 #001c08;
 }
 
 body.theme-winamp .wa-playlist-list li span {
@@ -752,42 +991,82 @@ body.theme-winamp .wa-playlist-list li span {
   text-overflow: ellipsis;
 }
 
+body.theme-winamp .wa-playlist-list li b {
+  color: inherit;
+  font-weight: 700;
+}
+
+body.theme-winamp .wa-playlist-list li:hover {
+  color: #cfff44;
+}
+
 body.theme-winamp .wa-playlist-list li.active {
-  color: #ffd84d;
+  color: var(--wa-title);
+  background: linear-gradient(90deg, rgba(236, 206, 122, 0.12), transparent);
+}
+
+body.theme-winamp .wa-playlist-empty {
+  color: var(--wa-title) !important;
+}
+
+body.theme-winamp .wa-playlist-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+body.theme-winamp .wa-playlist-list::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #171a28, #0a0c14);
+  border-left: 1px solid #000;
+}
+
+body.theme-winamp .wa-playlist-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #edffff 0%, #adb4c4 48%, #4a5a6b 100%);
+  border: 1px solid #080810;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.85),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.45);
 }
 
 body.theme-winamp .wa-playlist-footer {
-  margin-top: 8px;
+  height: 26px;
+  margin-top: 5px;
   display: flex;
   justify-content: space-between;
-  gap: 8px;
-  align-items: end;
+  align-items: center;
+  gap: 4px;
 }
 
 body.theme-winamp .wa-footer-buttons {
   display: flex;
-  gap: 4px;
   flex-wrap: wrap;
+  gap: 3px;
 }
 
 body.theme-winamp .wa-status-bar {
-  min-width: 118px;
-  background: #111414;
-  border: 1px solid #000;
-  box-shadow:
-    inset 1px 1px 0 #59615c,
-    inset -1px -1px 0 #000;
-  color: #00ff66;
-  font-size: 10px;
-  font-weight: 700;
-  font-family: "Courier New", monospace;
-  padding: 4px 6px;
+  min-width: 82px;
+  height: 18px;
+  padding: 3px 4px;
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: 5px;
+  color: var(--wa-green);
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 700;
+  background:
+    linear-gradient(180deg, rgba(0, 255, 70, 0.04), transparent),
+    #05070a;
+  border: 1px solid #000;
+  box-shadow:
+    inset 1px 1px 0 #5a6076,
+    inset -1px -1px 0 #000;
+  text-shadow:
+    0 0 3px rgba(0, 255, 70, 0.55),
+    1px 1px 0 #001a08;
 }
 
+/* ========================================================= */
 /* RESPONSIVO */
+/* ========================================================= */
 
 @media (max-width: 768px) {
   .main-content {
@@ -799,7 +1078,8 @@ body.theme-winamp .wa-status-bar {
     max-width: 100%;
   }
 
-  #player {
+  #player,
+  .filter-panel {
     max-width: 100%;
   }
 
@@ -809,55 +1089,12 @@ body.theme-winamp .wa-status-bar {
 }
 
 @media (max-width: 480px) {
-  body.theme-winamp .winamp-shell {
-    max-width: 100%;
+  body.theme-winamp {
+    --wa-width: 275px;
   }
 
-  body.theme-winamp .wa-top-row {
-    grid-template-columns: 54px 72px 1fr;
-    gap: 6px;
-  }
-
-  body.theme-winamp .wa-time-display {
-    font-size: 24px;
-  }
-
-  body.theme-winamp .wa-eq-body {
-    grid-template-columns: 52px 1fr 56px;
-    gap: 6px;
-  }
-
-  body.theme-winamp .wa-playlist-list li {
-    font-size: 11px;
-  }
-}
-
-/* Ajustes finos adicionados na depuração */
-body.theme-winamp .wa-playlist-list {
-  max-height: 230px;
-  overflow-y: auto;
-}
-
-body.theme-winamp .wa-playlist-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-body.theme-winamp .wa-playlist-list::-webkit-scrollbar-track {
-  background: #050705;
-}
-
-body.theme-winamp .wa-playlist-list::-webkit-scrollbar-thumb {
-  background: #6c7398;
-  border: 1px solid #1b1d2f;
-}
-
-body.theme-winamp .wa-bars.is-paused span {
-  animation-play-state: paused;
-  opacity: .55;
-}
-
-@media (max-width: 768px) {
-  .filter-panel {
-    border-radius: 12px;
+  body.theme-winamp .main-content {
+    padding-left: 8px;
+    padding-right: 8px;
   }
 }
