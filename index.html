@@ -41,6 +41,20 @@
         </select>
 
         <ul id="playlist" class="playlist"></ul>
+
+<div class="layout-theme-area">
+  <span class="theme-label">Clássico</span>
+
+  <label class="lamp-switch">
+    <input type="checkbox" id="theme-toggle">
+    <span class="lamp-track">
+      <span class="lamp-bulb"></span>
+    </span>
+  </label>
+
+  <span class="theme-label">Winamp</span>
+</div>  
+
       </aside>
 
       <section id="player" aria-label="Player de músicas anos 90">
@@ -90,5 +104,27 @@
   </main>
 
   <script src="index.js" type="module"></script>
+
+<script>
+  const themeToggle = document.getElementById("theme-toggle");
+
+  const savedTheme = localStorage.getItem("player-theme");
+
+  if (savedTheme === "winamp") {
+    document.body.classList.add("theme-winamp");
+    themeToggle.checked = true;
+  }
+
+  themeToggle.addEventListener("change", () => {
+    if (themeToggle.checked) {
+      document.body.classList.add("theme-winamp");
+      localStorage.setItem("player-theme", "winamp");
+    } else {
+      document.body.classList.remove("theme-winamp");
+      localStorage.setItem("player-theme", "classic");
+    }
+  });
+</script>
+
 </body>
 </html>

@@ -348,3 +348,252 @@ input[type="range"]::-ms-thumb {
     font-size: 15px;
   }
 }
+
+/* ============================= */
+/* ÁREA DO TROCADOR DE LAYOUT */
+/* ============================= */
+
+.theme-wrapper {
+  width: 100%;
+  max-width: 400px;
+}
+
+.layout-theme-area {
+  width: 100%;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.theme-label {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* Interruptor estilo lâmpada */
+.lamp-switch {
+  position: relative;
+  width: 64px;
+  height: 32px;
+  cursor: pointer;
+}
+
+.lamp-switch input {
+  display: none;
+}
+
+.lamp-track {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(145deg, #1b2038, #070b18);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.7),
+    0 0 12px rgba(0, 0, 0, 0.45);
+  transition: 0.3s ease;
+}
+
+.lamp-bulb {
+  position: absolute;
+  top: 4px;
+  left: 5px;
+  width: 24px;
+  height: 24px;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #b9c0ff 45%, #5b61a8);
+  border-radius: 50%;
+  box-shadow:
+    0 0 6px rgba(255, 255, 255, 0.45),
+    inset -2px -3px 5px rgba(0, 0, 0, 0.35);
+  transition: 0.3s ease;
+}
+
+/* Quando ativa o modo Winamp */
+.lamp-switch input:checked + .lamp-track {
+  background: linear-gradient(145deg, #ffb000, #ff6a00);
+  box-shadow:
+    0 0 16px rgba(255, 168, 0, 0.8),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25);
+}
+
+.lamp-switch input:checked + .lamp-track .lamp-bulb {
+  left: 35px;
+  background: radial-gradient(circle at 35% 30%, #fff7c4, #ffda54 45%, #ff8c00);
+  box-shadow:
+    0 0 18px rgba(255, 191, 0, 0.95),
+    0 0 32px rgba(255, 128, 0, 0.55),
+    inset -2px -3px 5px rgba(0, 0, 0, 0.28);
+}
+
+
+/* ============================= */
+/* TEMA WINAMP */
+/* Ativado com body.theme-winamp */
+/* ============================= */
+
+body.theme-winamp {
+  background:
+    radial-gradient(circle at top, rgba(255, 150, 0, 0.12), transparent 35%),
+    linear-gradient(135deg, #050505, #111827 45%, #020617);
+}
+
+/* Player estilo Winamp */
+body.theme-winamp #player {
+  background: linear-gradient(180deg, #2d3142, #151824);
+  border: 2px solid #080a10;
+  border-radius: 10px;
+  max-width: 420px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 14px 35px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Card */
+body.theme-winamp .card {
+  background: transparent;
+}
+
+/* Título estilo display antigo */
+body.theme-winamp h4 {
+  color: #00ff8c;
+  background:
+    linear-gradient(180deg, #111827, #050505);
+  font-family: "Courier New", monospace;
+  font-size: 17px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 2px solid #000;
+  text-shadow:
+    0 0 4px rgba(0, 255, 140, 0.9),
+    0 0 12px rgba(0, 255, 140, 0.45);
+}
+
+/* Imagem da música com aparência de painel */
+body.theme-winamp .card-image {
+  height: 300px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 2px solid #000;
+  filter: contrast(1.08) saturate(1.1);
+  position: relative;
+}
+
+/* Efeito de visor/spectrum sobre a imagem */
+body.theme-winamp .card-image::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  height: 42px;
+  border-radius: 6px;
+  background:
+    linear-gradient(to top, #00ff8c 15%, transparent 15% 100%),
+    repeating-linear-gradient(
+      to right,
+      rgba(0, 255, 140, 0.95) 0 5px,
+      transparent 5px 10px
+    ),
+    #020617;
+  opacity: 0.75;
+  box-shadow:
+    inset 0 0 12px rgba(0, 255, 140, 0.35),
+    0 0 12px rgba(0, 255, 140, 0.2);
+}
+
+/* Área dos controles */
+body.theme-winamp #player-controls {
+  background: linear-gradient(180deg, #272b3a, #10131d);
+  padding: 14px 10px 4px;
+  margin-top: 0;
+}
+
+/* Botões estilo clássico */
+body.theme-winamp #play-pause,
+body.theme-winamp #previous-track,
+body.theme-winamp #next-track {
+  background: linear-gradient(180deg, #f5b642, #d97706);
+  color: #111;
+  border: 1px solid #5f3300;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 3px 0 #4a2600,
+    0 5px 12px rgba(0, 0, 0, 0.45);
+}
+
+body.theme-winamp #play-pause:hover,
+body.theme-winamp #previous-track:hover,
+body.theme-winamp #next-track:hover {
+  background: linear-gradient(180deg, #ffd166, #f59e0b);
+}
+
+body.theme-winamp #play-pause:active,
+body.theme-winamp #previous-track:active,
+body.theme-winamp #next-track:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 1px 4px rgba(0, 0, 0, 0.45),
+    0 1px 0 #4a2600;
+}
+
+/* Volume */
+body.theme-winamp #volume-icon {
+  color: #00ff8c;
+  text-shadow: 0 0 8px rgba(0, 255, 140, 0.9);
+}
+
+/* Sliders no tema Winamp */
+body.theme-winamp input[type="range"] {
+  accent-color: #ffb000;
+}
+
+body.theme-winamp input[type="range"]::-webkit-slider-thumb {
+  background-color: #ffb000;
+}
+
+body.theme-winamp input[type="range"]::-moz-range-thumb {
+  background-color: #ffb000;
+}
+
+body.theme-winamp input[type="range"]::-ms-thumb {
+  background-color: #ffb000;
+}
+
+/* Botões de troca de faixa */
+body.theme-winamp .change-tracks {
+  background: linear-gradient(180deg, #1f2433, #0f121b);
+  padding: 14px 0 20px;
+  margin-bottom: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Áudio nativo, caso esteja visível */
+body.theme-winamp audio {
+  background: #111827;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+
+/* ============================= */
+/* RESPONSIVO */
+/* ============================= */
+
+@media (max-width: 768px) {
+  .theme-wrapper {
+    max-width: 100%;
+  }
+
+  body.theme-winamp #player {
+    max-width: 100%;
+  }
+
+  body.theme-winamp .card-image {
+    height: 280px;
+  }
+}
