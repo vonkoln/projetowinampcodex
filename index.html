@@ -18,11 +18,10 @@
     href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
   >
 
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
 
 <body>
-
   <div class="container">
 
     <!--
@@ -32,7 +31,6 @@
     -->
 
     <main class="main-content">
-
       <div class="theme-wrapper">
 
         <div class="layout-theme-area">
@@ -48,16 +46,32 @@
           <span class="theme-label">Winamp</span>
         </div>
 
+        <section class="filter-panel" aria-label="Filtros da playlist">
+          <input
+            id="search-input"
+            type="search"
+            placeholder="Buscar música ou artista..."
+            autocomplete="off"
+          >
+
+          <select id="category-filter" class="browser-default" aria-label="Filtrar por categoria">
+            <option value="all">Todas as categorias</option>
+          </select>
+
+          <div id="playlist-count" class="playlist-count">0 faixas</div>
+        </section>
+
         <!-- PLAYER CLÁSSICO -->
         <section id="player">
           <div class="card">
-
             <h4 id="classic-title">Player</h4>
+
+            <p id="classic-artist" class="classic-artist">Artista</p>
+            <p id="now-playing-category" class="classic-category">Categoria</p>
 
             <div class="card-image" id="classic-cover"></div>
 
             <div class="card-content">
-
               <audio id="audio" preload="metadata"></audio>
 
               <div class="classic-time-row">
@@ -71,27 +85,32 @@
                 min="0"
                 max="100"
                 value="0"
+                aria-label="Progresso da música"
               >
 
               <div id="player-controls" class="center-align">
-                <button id="previous-track" class="btn-floating waves-effect waves-light">
+                <button id="previous-track" class="btn-floating waves-effect waves-light" type="button" aria-label="Faixa anterior">
                   <i class="material-icons">skip_previous</i>
                 </button>
 
-                <button id="play-pause" class="btn-floating btn-large waves-effect waves-light">
+                <button id="play-pause" class="btn-floating btn-large waves-effect waves-light" type="button" aria-label="Tocar ou pausar">
                   <i class="material-icons" id="classic-play-icon">play_arrow</i>
                 </button>
 
-                <button id="next-track" class="btn-floating waves-effect waves-light">
+                <button id="next-track" class="btn-floating waves-effect waves-light" type="button" aria-label="Próxima faixa">
                   <i class="material-icons">skip_next</i>
                 </button>
               </div>
 
               <div class="change-tracks">
-                <i id="volume-icon" class="material-icons">volume_up</i>
-                <input id="volume" type="range" min="0" max="100" value="80">
+                <button id="volume-button" type="button" class="volume-button" aria-label="Ativar ou desativar volume">
+                  <i id="volume-icon" class="material-icons">volume_up</i>
+                </button>
+
+                <input id="volume" type="range" min="0" max="100" value="80" aria-label="Volume">
               </div>
 
+              <p id="player-status" class="player-status" aria-live="polite"></p>
             </div>
           </div>
         </section>
@@ -100,7 +119,6 @@
         <section class="winamp-shell">
 
           <div class="wa-window wa-main-player">
-
             <div class="wa-titlebar">
               <span>WINAMP</span>
 
@@ -112,25 +130,19 @@
             </div>
 
             <div class="wa-main-body">
-
               <div class="wa-top-row">
-
                 <div class="wa-visualizer">
-                  <div class="wa-bars">
+                  <div class="wa-bars" aria-hidden="true">
                     <span></span><span></span><span></span><span></span><span></span>
                     <span></span><span></span><span></span><span></span><span></span>
                     <span></span><span></span><span></span><span></span><span></span>
                   </div>
                 </div>
 
-                <div class="wa-time-display" id="wa-current-time">
-                  00:00
-                </div>
+                <div class="wa-time-display" id="wa-current-time">00:00</div>
 
                 <div class="wa-track-info">
-                  <div class="wa-track-title" id="wa-track-title">
-                    1. Música
-                  </div>
+                  <div class="wa-track-title" id="wa-track-title">1. Música</div>
 
                   <div class="wa-meta-row">
                     <span class="wa-meta-box">128 kbps</span>
@@ -140,36 +152,33 @@
                   </div>
 
                   <div class="wa-seek-row">
-                    <div class="wa-seekbar" id="wa-seekbar">
+                    <div class="wa-seekbar" id="wa-seekbar" role="slider" aria-label="Progresso da música">
                       <span id="wa-seek-thumb"></span>
                     </div>
 
-                    <div class="wa-volumebar" id="wa-volumebar">
+                    <div class="wa-volumebar" id="wa-volumebar" role="slider" aria-label="Volume">
                       <span id="wa-volume-thumb"></span>
                     </div>
                   </div>
                 </div>
-
               </div>
 
               <div class="wa-button-row">
-                <button class="wa-small-btn" id="wa-prev">◀◀</button>
-                <button class="wa-small-btn" id="wa-play">▶</button>
-                <button class="wa-small-btn" id="wa-pause">❚❚</button>
-                <button class="wa-small-btn" id="wa-stop">■</button>
-                <button class="wa-small-btn" id="wa-next">▶▶</button>
+                <button class="wa-small-btn" id="wa-prev" type="button" aria-label="Faixa anterior">◀◀</button>
+                <button class="wa-small-btn" id="wa-play" type="button" aria-label="Tocar">▶</button>
+                <button class="wa-small-btn" id="wa-pause" type="button" aria-label="Pausar">❚❚</button>
+                <button class="wa-small-btn" id="wa-stop" type="button" aria-label="Parar">■</button>
+                <button class="wa-small-btn" id="wa-next" type="button" aria-label="Próxima faixa">▶▶</button>
 
                 <div class="wa-main-actions">
-                  <button class="wa-mini-btn">EQ</button>
-                  <button class="wa-mini-btn">PL</button>
+                  <button class="wa-mini-btn" type="button">EQ</button>
+                  <button class="wa-mini-btn" type="button">PL</button>
                 </div>
               </div>
-
             </div>
           </div>
 
           <div class="wa-window wa-eq">
-
             <div class="wa-titlebar">
               <span>WINAMP EQUALIZER</span>
 
@@ -181,11 +190,10 @@
             </div>
 
             <div class="wa-eq-body">
-
               <div class="wa-eq-left">
                 <div class="wa-toggle-row">
-                  <button class="wa-mini-btn on">ON</button>
-                  <button class="wa-mini-btn">AUTO</button>
+                  <button class="wa-mini-btn on" type="button">ON</button>
+                  <button class="wa-mini-btn" type="button">AUTO</button>
                 </div>
 
                 <div class="wa-preamp-label">-12db</div>
@@ -213,14 +221,12 @@
               </div>
 
               <div class="wa-eq-right">
-                <button class="wa-mini-btn">PRESETS</button>
+                <button class="wa-mini-btn" type="button">PRESETS</button>
               </div>
-
             </div>
           </div>
 
           <div class="wa-window wa-playlist">
-
             <div class="wa-titlebar">
               <span>WINAMP PLAYLIST</span>
 
@@ -232,32 +238,26 @@
             </div>
 
             <div class="wa-playlist-body">
-
               <ol class="wa-playlist-list" id="wa-playlist"></ol>
 
               <div class="wa-playlist-footer">
-
                 <div class="wa-footer-buttons">
-                  <button class="wa-mini-btn">ADD</button>
-                  <button class="wa-mini-btn">REM</button>
-                  <button class="wa-mini-btn">SEL</button>
-                  <button class="wa-mini-btn">MISC</button>
+                  <button class="wa-mini-btn" type="button">ADD</button>
+                  <button class="wa-mini-btn" type="button">REM</button>
+                  <button class="wa-mini-btn" type="button">SEL</button>
+                  <button class="wa-mini-btn" type="button">MISC</button>
                 </div>
 
                 <div class="wa-status-bar">
                   <span id="wa-status-time">00:00/00:00</span>
-                  <span id="wa-total-playlist">00:00</span>
+                  <span id="wa-total-playlist">0 FX</span>
                 </div>
-
               </div>
-
             </div>
           </div>
-
         </section>
 
       </div>
-
     </main>
 
     <!--
@@ -268,9 +268,6 @@
 
   </div>
 
-  <script src="index.js"></script>
-
-<script type="module" src="index.js"></script>
-
+  <script type="module" src="./index.js"></script>
 </body>
 </html>
