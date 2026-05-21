@@ -56,7 +56,7 @@ const elements = {
   waSeekThumb: document.getElementById("wa-seek-thumb"),
   waVolumebar: document.getElementById("wa-volumebar"),
   waVolumeThumb: document.getElementById("wa-volume-thumb"),
-  waBars: document.querySelector(".wa-bars"),
+  waSpectrumBars: document.getElementById("wa-spectrum-bars"),
 
   waPrev: document.getElementById("wa-prev"),
   waPlay: document.getElementById("wa-play"),
@@ -68,6 +68,12 @@ const elements = {
 let filteredTracks = [...tracks];
 let currentTrackIndex = 0;
 let lastVolumeBeforeMute = 80;
+
+let audioContext = null;
+let analyserNode = null;
+let mediaElementSource = null;
+let frequencyData = null;
+let visualizerFrameId = null;
 
 function assertRequiredElements() {
   const missing = Object.entries(elements)
@@ -222,6 +228,8 @@ function loadTrack(index) {
   elements.waStatusTime.textContent = `00:00/${track.duration || "--:--"}`;
   elements.waSeekThumb.style.left = "0%";
 
+  resetVisualizer();
+
   showStatus("");
   saveCurrentTrack();
   renderPlaylist();
@@ -243,27 +251,156 @@ function setCurrentTrackById(id, shouldPlay = false) {
   }
 }
 
-function playTrack() {
+async function initAudioAnalyzer() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioContextClass) {
+    return;
+  }
+
+  if (!audioContext) {
+    audioContext = new AudioContextClass();
+
+    analyserNode = audioContext.createAnalyser();
+    analyserNode.fftSize = 256;
+    analyserNode.smoothingTimeConstant = 0.78;
+
+    frequencyData = new Uint8Array(analyserNode.frequencyBinCount);
+
+    mediaElementSource = audioContext.createMediaElementSource(elements.audio);
+    mediaElementSource.connect(analyserNode);
+    analyserNode.connect(audioContext.destination);
+  }
+
+  if (audioContext.state === "suspended") {
+    await audioContext.resume();
+  }
+}
+
+function getAverageFrequency(start, end) {
+  if (!frequencyData || !frequencyData.length) {
+    return 0;
+  }
+
+  const safeStart = Math.max(0, Math.min(start, frequencyData.length - 1));
+  const safeEnd = Math.max(safeStart + 1, Math.min(end, frequencyData.length));
+
+  let total = 0;
+  let count = 0;
+
+  for (let i = safeStart; i < safeEnd; i++) {
+    total += frequencyData[i];
+    count++;
+  }
+
+  return count ? total / count : 0;
+}
+
+function animateVisualizer() {
+  if (!analyserNode || !frequencyData) {
+    return;
+  }
+
+  analyserNode.getByteFrequencyData(frequencyData);
+
+  const bars = elements.waSpectrumBars.querySelectorAll("span");
+  const barCount = bars.length;
+  const binCount = frequencyData.length;
+
+  const bassEnergy = getAverageFrequency(1, 10);
+  const midEnergy = getAverageFrequency(10, 45);
+  const highEnergy = getAverageFrequency(45, 95);
+
+  bars.forEach((bar, index) => {
+    const startRatio = index / barCount;
+    const endRatio = (index + 1) / barCount;
+
+    const startBin = Math.floor(Math.pow(startRatio, 1.8) * binCount);
+    const endBin = Math.max(startBin + 1, Math.floor(Math.pow(endRatio, 1.8) * binCount));
+
+    const rawValue = getAverageFrequency(startBin, endBin);
+
+    const rhythmWeight = index < 5
+      ? bassEnergy * 0.38
+      : index < 11
+        ? midEnergy * 0.28
+        : highEnergy * 0.22;
+
+    const mixedValue = rawValue * 0.72 + rhythmWeight;
+    const normalized = Math.max(0, Math.min(1, mixedValue / 255));
+
+    const minimumHeight = elements.audio.paused ? 8 : 12;
+    const height = minimumHeight + normalized * 88;
+
+    bar.style.height = `${height}%`;
+    bar.style.opacity = `${0.45 + normalized * 0.55}`;
+    bar.style.setProperty("--bar-energy", normalized.toFixed(3));
+  });
+
+  visualizerFrameId = requestAnimationFrame(animateVisualizer);
+}
+
+function startVisualizer() {
+  if (visualizerFrameId) {
+    return;
+  }
+
+  elements.waSpectrumBars.classList.remove("is-paused");
+  visualizerFrameId = requestAnimationFrame(animateVisualizer);
+}
+
+function stopVisualizer() {
+  if (visualizerFrameId) {
+    cancelAnimationFrame(visualizerFrameId);
+    visualizerFrameId = null;
+  }
+
+  elements.waSpectrumBars.classList.add("is-paused");
+}
+
+function resetVisualizer() {
+  const bars = elements.waSpectrumBars.querySelectorAll("span");
+
+  bars.forEach((bar, index) => {
+    const idleHeight = 12 + ((index * 7) % 22);
+
+    bar.style.height = `${idleHeight}%`;
+    bar.style.opacity = "0.45";
+    bar.style.setProperty("--bar-energy", "0");
+  });
+}
+
+async function playTrack() {
   if (!elements.audio.src) {
     loadTrack(currentTrackIndex);
   }
 
-  const playPromise = elements.audio.play();
+  try {
+    await initAudioAnalyzer();
 
-  if (playPromise !== undefined) {
-    playPromise.catch(() => {
-      showStatus("O navegador bloqueou a reprodução ou o arquivo não foi encontrado.");
-    });
+    const playPromise = elements.audio.play();
+
+    if (playPromise !== undefined) {
+      await playPromise;
+    }
+
+    startVisualizer();
+    showStatus("");
+  } catch {
+    showStatus("O navegador bloqueou a reprodução ou o arquivo não foi encontrado.");
   }
 }
 
 function pauseTrack() {
   elements.audio.pause();
+  stopVisualizer();
 }
 
 function stopTrack() {
   elements.audio.pause();
   elements.audio.currentTime = 0;
+  stopVisualizer();
+  resetVisualizer();
   updateTimeDisplay();
 }
 
@@ -293,7 +430,12 @@ function updatePlayIcon() {
   const isPaused = elements.audio.paused;
 
   elements.classicPlayIcon.textContent = isPaused ? "play_arrow" : "pause";
-  elements.waBars.classList.toggle("is-paused", isPaused);
+
+  if (isPaused) {
+    elements.waSpectrumBars.classList.add("is-paused");
+  } else {
+    elements.waSpectrumBars.classList.remove("is-paused");
+  }
 }
 
 function updateCurrentTrackDuration() {
@@ -458,13 +600,26 @@ function bindEvents() {
   });
 
   elements.audio.addEventListener("timeupdate", updateTimeDisplay);
-  elements.audio.addEventListener("ended", nextSong);
-  elements.audio.addEventListener("play", updatePlayIcon);
-  elements.audio.addEventListener("pause", updatePlayIcon);
+
+  elements.audio.addEventListener("ended", () => {
+    stopVisualizer();
+    nextSong();
+  });
+
+  elements.audio.addEventListener("play", () => {
+    updatePlayIcon();
+    startVisualizer();
+  });
+
+  elements.audio.addEventListener("pause", () => {
+    updatePlayIcon();
+    stopVisualizer();
+  });
 
   elements.audio.addEventListener("error", () => {
     const track = getCurrentTrack();
     showStatus(`Não foi possível carregar: ${track?.file || track?.title || "faixa atual"}.`);
+    stopVisualizer();
   });
 
   document.addEventListener("keydown", (event) => {
@@ -508,6 +663,7 @@ function start() {
   bindEvents();
   loadTrack(currentTrackIndex);
   applyFilters();
+  resetVisualizer();
 }
 
 start();
