@@ -1098,3 +1098,344 @@ body.theme-winamp .wa-status-bar {
     padding-right: 8px;
   }
 }
+
+/* ========================================================= */
+/* REFINO 01 — TOPO WINAMP / MAIN WINDOW */
+/* Aproximação mais fiel da skin Base 2.91 */
+/* ========================================================= */
+
+body.theme-winamp {
+  --wa-main-purple-dark: #22243a;
+  --wa-main-purple: #2f314e;
+  --wa-main-purple-light: #444867;
+  --wa-main-highlight: #c8d4dc;
+  --wa-main-shadow: #05060b;
+  --wa-main-gold: #ecd27b;
+  --wa-main-green: #7cff7c;
+  --wa-main-lime: #d8ff4a;
+}
+
+/* Janela principal com proporção e textura mais fiel */
+body.theme-winamp .wa-main-player {
+  height: 116px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.028) 0px,
+      rgba(255, 255, 255, 0.028) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 32%),
+    linear-gradient(180deg, #414563 0%, #2d304b 48%, #23263b 100%);
+  border: 1px solid #000;
+  box-shadow:
+    inset 1px 1px 0 #c4d0d8,
+    inset -1px -1px 0 #090a10,
+    0 0 0 1px #25283d;
+}
+
+/* Linha clara interna, típica da skin */
+body.theme-winamp .wa-main-player::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.38);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Linha escura inferior interna */
+body.theme-winamp .wa-main-player::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.58);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Barra superior WINAMP mais parecida com bitmap original */
+body.theme-winamp .wa-main-player .wa-titlebar {
+  height: 14px;
+  padding: 0 3px 0 5px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.10) 0px,
+      rgba(255, 255, 255, 0.10) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    linear-gradient(180deg, #4a4f70 0%, #353956 48%, #20233a 100%);
+  border-bottom: 1px solid #05060b;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.75);
+}
+
+/* Texto WINAMP com cara de pixel/skin */
+body.theme-winamp .wa-main-player .wa-titlebar > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--wa-main-gold);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  line-height: 14px;
+  text-shadow:
+    1px 1px 0 #000,
+    0 0 2px rgba(236, 210, 123, 0.35);
+}
+
+/* Pequeno ícone à esquerda do título */
+body.theme-winamp .wa-main-player .wa-titlebar > span:first-child::before {
+  content: "↯";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 8px;
+  height: 10px;
+  color: #f1d56f;
+  font-size: 10px;
+  line-height: 1;
+  transform: translateY(-1px);
+  text-shadow:
+    1px 1px 0 #000,
+    0 0 2px rgba(255, 220, 80, 0.5);
+}
+
+/* Botões minimizar/maximizar/fechar mais quadrados e pequenos */
+body.theme-winamp .wa-main-player .wa-title-buttons {
+  gap: 2px;
+}
+
+body.theme-winamp .wa-main-player .wa-title-buttons span {
+  width: 7px;
+  height: 7px;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #d9e1e7 38%, #8d95a4 70%, #596174 100%);
+  border: 1px solid #06070d;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.95),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* Corpo principal mais compacto e com tom correto */
+body.theme-winamp .wa-main-body {
+  height: 101px;
+  padding: 7px 7px 6px;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255,255,255,0.08), transparent 18%),
+    linear-gradient(135deg, rgba(255,255,255,0.045), transparent 34%),
+    linear-gradient(180deg, #3d405d 0%, #30334e 42%, #25283d 100%);
+}
+
+/* Proporção dos três blocos superiores */
+body.theme-winamp .wa-main-player .wa-top-row {
+  grid-template-columns: 62px 70px 1fr;
+  gap: 5px;
+  align-items: start;
+}
+
+/* Painéis pretos afundados */
+body.theme-winamp .wa-main-player .wa-visualizer,
+body.theme-winamp .wa-main-player .wa-time-display,
+body.theme-winamp .wa-main-player .wa-track-title {
+  background:
+    linear-gradient(180deg, rgba(0, 255, 80, 0.035), transparent),
+    #040609;
+  border: 1px solid #000;
+  box-shadow:
+    inset 1px 1px 0 #626981,
+    inset -1px -1px 0 #000,
+    0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+
+/* Visualizer mais próximo: preto, grid e barras verdes/amarelas */
+body.theme-winamp .wa-main-player .wa-visualizer {
+  width: 62px;
+  height: 43px;
+  padding: 3px;
+  background:
+    linear-gradient(rgba(0, 255, 70, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 70, 0.075) 1px, transparent 1px),
+    #040609;
+  background-size: 7px 7px;
+}
+
+body.theme-winamp .wa-main-player .wa-bars {
+  gap: 1px;
+}
+
+body.theme-winamp .wa-main-player .wa-bars span {
+  width: 3px;
+  background:
+    linear-gradient(
+      180deg,
+      #fff35c 0%,
+      #d8ff4a 26%,
+      #44ff23 58%,
+      #009c38 100%
+    );
+  box-shadow:
+    0 0 2px rgba(68, 255, 35, 0.5);
+}
+
+/* Display do tempo: menor, mais pixelado e afundado */
+body.theme-winamp .wa-main-player .wa-time-display {
+  width: 70px;
+  height: 43px;
+  color: #caffcf;
+  font-family: "Courier New", monospace;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -2px;
+  text-shadow:
+    0 0 2px rgba(124, 255, 124, 0.95),
+    0 0 6px rgba(0, 255, 80, 0.45),
+    1px 1px 0 #002b0c;
+}
+
+/* Display do nome da música */
+body.theme-winamp .wa-main-player .wa-track-title {
+  height: 16px;
+  margin-bottom: 4px;
+  padding: 1px 4px;
+  color: #caffcf;
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 800;
+  text-shadow:
+    0 0 3px rgba(0, 255, 80, 0.48),
+    1px 1px 0 #001c08;
+}
+
+/* Linha 128 kbps / 44 kHz / mono / stereo */
+body.theme-winamp .wa-main-player .wa-meta-row {
+  height: 15px;
+  margin-bottom: 5px;
+  gap: 3px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+body.theme-winamp .wa-main-player .wa-meta-box {
+  height: 14px;
+  padding: 0 3px;
+  color: #ffffff;
+  background:
+    linear-gradient(180deg, #474b69 0%, #2b2e47 100%);
+  border: 1px solid #0a0b12;
+  box-shadow:
+    inset 1px 1px 0 #9399ad,
+    inset -1px -1px 0 #11131f;
+  font-size: 9px;
+  line-height: 12px;
+  font-weight: 900;
+}
+
+body.theme-winamp .wa-main-player .wa-meta-text {
+  color: #d7dbe8;
+  font-size: 9px;
+  line-height: 13px;
+  font-weight: 800;
+  text-shadow: 1px 1px 0 #000;
+}
+
+body.theme-winamp .wa-main-player .wa-meta-text.active {
+  color: var(--wa-main-lime);
+}
+
+/* Seek e volume mais parecidos com trilhos do Winamp */
+body.theme-winamp .wa-main-player .wa-seek-row {
+  gap: 5px;
+}
+
+body.theme-winamp .wa-main-player .wa-seekbar,
+body.theme-winamp .wa-main-player .wa-volumebar {
+  height: 8px;
+  background:
+    linear-gradient(180deg, #151724 0%, #080a10 100%);
+  border: 1px solid #000;
+  box-shadow:
+    inset 1px 1px 0 #626981,
+    inset -1px -1px 0 #000;
+}
+
+body.theme-winamp .wa-main-player .wa-volumebar {
+  width: 42px;
+}
+
+/* Thumb dourado/bege */
+body.theme-winamp .wa-main-player .wa-seekbar span,
+body.theme-winamp .wa-main-player .wa-volumebar span {
+  top: 1px;
+  width: 8px;
+  height: 4px;
+  background:
+    linear-gradient(180deg, #fff6b7 0%, #e1c75a 48%, #8a6a1b 100%);
+  border: 1px solid #2a2108;
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.85),
+    0 0 2px rgba(236, 210, 123, 0.45);
+}
+
+/* Botões inferiores mais fiéis */
+body.theme-winamp .wa-main-player .wa-button-row {
+  margin-top: 7px;
+  gap: 3px;
+}
+
+body.theme-winamp .wa-main-player .wa-small-btn,
+body.theme-winamp .wa-main-player .wa-mini-btn {
+  color: #10131e;
+  background:
+    linear-gradient(180deg, #f4ffff 0%, #c2c9d5 40%, #7d879c 72%, #4b586f 100%);
+  border: 1px solid #07080e;
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.95),
+    inset -1px -1px 0 rgba(0,0,0,0.55);
+  text-shadow: 1px 1px 0 rgba(255,255,255,0.45);
+}
+
+body.theme-winamp .wa-main-player .wa-small-btn {
+  width: 23px;
+  height: 18px;
+  padding: 0;
+  font-size: 9px;
+  line-height: 15px;
+}
+
+body.theme-winamp .wa-main-player .wa-mini-btn {
+  min-width: 31px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 9px;
+  line-height: 15px;
+}
+
+/* Estado pressionado */
+body.theme-winamp .wa-main-player .wa-small-btn:active,
+body.theme-winamp .wa-main-player .wa-mini-btn:active {
+  background:
+    linear-gradient(180deg, #58657d 0%, #aeb7c9 100%);
+  box-shadow:
+    inset 1px 1px 0 rgba(0,0,0,0.65),
+    inset -1px -1px 0 rgba(255,255,255,0.65);
+  transform: translateY(1px);
+}
+
+/* EQ / PL encostados à direita como no Winamp */
+body.theme-winamp .wa-main-player .wa-main-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
