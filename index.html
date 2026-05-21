@@ -22,7 +22,6 @@
 </head>
 
 <body>
-
   <div class="container">
 
     <!--
@@ -32,7 +31,6 @@
     -->
 
     <main class="main-content">
-
       <div class="theme-wrapper">
 
         <div class="layout-theme-area">
@@ -66,7 +64,6 @@
         <!-- PLAYER CLÁSSICO -->
         <section id="player">
           <div class="card">
-
             <h4 id="classic-title">Player</h4>
 
             <div id="classic-artist">Artista</div>
@@ -76,7 +73,6 @@
             <div class="card-image" id="classic-cover"></div>
 
             <div class="card-content">
-
               <audio id="audio" preload="metadata"></audio>
 
               <div class="classic-time-row">
@@ -115,7 +111,6 @@
               </div>
 
               <div id="player-status"></div>
-
             </div>
           </div>
         </section>
@@ -123,8 +118,8 @@
         <!-- PLAYER WINAMP -->
         <section class="winamp-shell">
 
+          <!-- MAIN -->
           <div class="wa-window wa-main-player">
-
             <div class="wa-titlebar">
               <span>WINAMP</span>
 
@@ -139,18 +134,29 @@
 
               <div class="wa-top-row">
 
-                <!-- VISOR ÚNICO: BARRAS + TEMPO -->
+                <!-- VISOR ÚNICO -->
                 <div class="wa-combo-display" id="wa-combo-display">
-                  <div class="wa-spectrum-bars is-paused" id="wa-spectrum-bars" aria-hidden="true">
-                    <span></span><span></span><span></span><span></span>
-                    <span></span><span></span><span></span><span></span>
-                    <span></span><span></span><span></span><span></span>
-                    <span></span><span></span><span></span><span></span>
+
+                  <div class="wa-display-status">
+                    <div class="wa-status-top">
+                      <span class="wa-status-led wa-status-led-green"></span>
+                      <span class="wa-status-led wa-status-led-red"></span>
+                    </div>
+
+                    <div class="wa-play-indicator" id="wa-play-indicator" aria-hidden="true"></div>
+
+                    <div class="wa-status-scale" aria-hidden="true">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
                   </div>
 
-                  <div class="wa-time-display" id="wa-current-time">
-                    00:00
-                  </div>
+                  <div class="wa-time-matrix" id="wa-time-matrix" aria-label="Tempo atual"></div>
+
+                  <div class="wa-spectrum-panel" id="wa-spectrum" aria-hidden="true"></div>
                 </div>
 
                 <div class="wa-track-info">
@@ -159,8 +165,8 @@
                   </div>
 
                   <div class="wa-meta-row">
-                    <span class="wa-meta-box">128 kbps</span>
-                    <span class="wa-meta-box">44 kHz</span>
+                    <span class="wa-meta-box" id="wa-bitrate-box">192 kbps</span>
+                    <span class="wa-meta-box" id="wa-khz-box">44 kHz</span>
                     <span class="wa-meta-text">mono</span>
                     <span class="wa-meta-text active">stereo</span>
                   </div>
@@ -179,11 +185,11 @@
               </div>
 
               <div class="wa-button-row">
-                <button class="wa-small-btn" id="wa-prev" type="button">◀◀</button>
-                <button class="wa-small-btn" id="wa-play" type="button">▶</button>
-                <button class="wa-small-btn" id="wa-pause" type="button">❚❚</button>
-                <button class="wa-small-btn" id="wa-stop" type="button">■</button>
-                <button class="wa-small-btn" id="wa-next" type="button">▶▶</button>
+                <button class="wa-small-btn" id="wa-prev" type="button" aria-label="Anterior">◀◀</button>
+                <button class="wa-small-btn" id="wa-play" type="button" aria-label="Play">▶</button>
+                <button class="wa-small-btn" id="wa-pause" type="button" aria-label="Pause">❚❚</button>
+                <button class="wa-small-btn" id="wa-stop" type="button" aria-label="Stop">■</button>
+                <button class="wa-small-btn" id="wa-next" type="button" aria-label="Próxima">▶▶</button>
 
                 <div class="wa-main-actions">
                   <button class="wa-mini-btn" type="button">EQ</button>
@@ -194,8 +200,8 @@
             </div>
           </div>
 
+          <!-- EQUALIZER -->
           <div class="wa-window wa-eq">
-
             <div class="wa-titlebar">
               <span>WINAMP EQUALIZER</span>
 
@@ -207,7 +213,6 @@
             </div>
 
             <div class="wa-eq-body">
-
               <div class="wa-eq-left">
                 <div class="wa-toggle-row">
                   <button class="wa-mini-btn on" type="button">ON</button>
@@ -241,12 +246,11 @@
               <div class="wa-eq-right">
                 <button class="wa-mini-btn" type="button">PRESETS</button>
               </div>
-
             </div>
           </div>
 
+          <!-- PLAYLIST -->
           <div class="wa-window wa-playlist">
-
             <div class="wa-titlebar">
               <span>WINAMP PLAYLIST</span>
 
@@ -258,11 +262,9 @@
             </div>
 
             <div class="wa-playlist-body">
-
               <ol class="wa-playlist-list" id="wa-playlist"></ol>
 
               <div class="wa-playlist-footer">
-
                 <div class="wa-footer-buttons">
                   <button class="wa-mini-btn" type="button">ADD</button>
                   <button class="wa-mini-btn" type="button">REM</button>
@@ -274,16 +276,13 @@
                   <span id="wa-status-time">00:00/00:00</span>
                   <span id="wa-total-playlist">0 FX</span>
                 </div>
-
               </div>
-
             </div>
           </div>
 
         </section>
 
       </div>
-
     </main>
 
     <!--

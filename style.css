@@ -332,7 +332,7 @@ input[type="range"]::-ms-thumb {
 }
 
 /* ========================================================= */
-/* WINAMP — BASE 2.91 UI REFINADO */
+/* WINAMP */
 /* ========================================================= */
 
 .winamp-shell {
@@ -341,34 +341,26 @@ input[type="range"]::-ms-thumb {
 
 body.theme-winamp {
   --wa-width: 275px;
-
   --wa-bg-dark: #181829;
   --wa-bg-base: #292940;
   --wa-bg-mid: #383858;
   --wa-bg-light: #39395a;
-
   --wa-black: #080810;
-  --wa-black-2: #0b0f16;
-
   --wa-border-bright: #bfcdd3;
   --wa-border-mid: #798a9e;
-  --wa-border-soft: #4a5a6b;
   --wa-border-dark: #000000;
-
   --wa-title: #ecce7a;
   --wa-title-shadow: #302310;
-
-  --wa-green: #00ff45;
-  --wa-green-soft: #9dff6e;
-  --wa-lime: #cfff44;
-
+  --wa-green: #41ff31;
+  --wa-green-soft: #b8ff59;
+  --wa-yellow: #fff274;
+  --wa-cyan: #56b8ff;
+  --wa-white: #f0f1f9;
   --wa-button-top: #edffff;
   --wa-button-mid: #adb4c4;
   --wa-button-bottom: #4a5a6b;
-
   --wa-slider-gold: #e1c95c;
   --wa-slider-dark: #211b0a;
-
   background:
     radial-gradient(circle at top, rgba(236, 206, 122, 0.05), transparent 32%),
     linear-gradient(180deg, #10131d 0%, #171a29 100%);
@@ -454,7 +446,7 @@ body.theme-winamp .lamp-switch input:checked + .lamp-track .lamp-bulb {
 }
 
 /* ========================================================= */
-/* JANELAS WINAMP */
+/* JANELAS */
 /* ========================================================= */
 
 body.theme-winamp .wa-window {
@@ -571,7 +563,7 @@ body.theme-winamp .wa-title-buttons span {
 }
 
 /* ========================================================= */
-/* MAIN PLAYER */
+/* MAIN */
 /* ========================================================= */
 
 body.theme-winamp .wa-main-player {
@@ -604,27 +596,38 @@ body.theme-winamp .wa-main-body {
 
 body.theme-winamp .wa-top-row {
   display: grid;
-  grid-template-columns: 137px 1fr;
+  grid-template-columns: 154px 1fr;
   gap: 5px;
   align-items: start;
 }
 
-/* Visor único: barras + tempo */
+/* ========================================================= */
+/* VISOR ÚNICO */
+/* ========================================================= */
+
 body.theme-winamp .wa-combo-display {
   position: relative;
-  width: 137px;
+  width: 154px;
   height: 43px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 73% 50%, rgba(0, 255, 70, 0.09), transparent 54%),
-    linear-gradient(rgba(0, 255, 70, 0.065) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 70, 0.065) 1px, transparent 1px),
-    #040609;
-  background-size:
-    auto,
-    7px 7px,
-    7px 7px,
-    auto;
+    radial-gradient(circle at 62% 34%, rgba(55, 255, 45, 0.09), transparent 38%),
+    radial-gradient(circle at 20% 85%, rgba(60, 120, 255, 0.10), transparent 28%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(67, 102, 163, 0.17) 0,
+      rgba(67, 102, 163, 0.17) 1px,
+      transparent 1px,
+      transparent 6px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      rgba(67, 102, 163, 0.14) 0,
+      rgba(67, 102, 163, 0.14) 1px,
+      transparent 1px,
+      transparent 6px
+    ),
+    linear-gradient(180deg, #05080e 0%, #06090f 100%);
   border: 1px solid #000;
   box-shadow:
     inset 1px 1px 0 #626981,
@@ -637,79 +640,196 @@ body.theme-winamp .wa-combo-display::after {
   position: absolute;
   top: 4px;
   bottom: 4px;
-  left: 62px;
+  left: 132px;
   width: 1px;
   background:
     linear-gradient(
       180deg,
-      transparent,
-      rgba(0, 255, 70, 0.22),
-      rgba(0, 0, 0, 0.8),
-      rgba(0, 255, 70, 0.16),
-      transparent
+      rgba(255,255,255,0.2),
+      rgba(255,255,255,0.55),
+      rgba(0,0,0,0.5)
     );
+  opacity: 0.9;
   pointer-events: none;
 }
 
-body.theme-winamp .wa-spectrum-bars {
+/* STATUS LATERAL */
+body.theme-winamp .wa-display-status {
   position: absolute;
-  left: 3px;
+  left: 5px;
   top: 3px;
-  bottom: 3px;
-  width: 56px;
+  width: 22px;
+  height: 36px;
+  z-index: 3;
+}
+
+body.theme-winamp .wa-status-top {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 3px;
+  padding-left: 1px;
+}
+
+body.theme-winamp .wa-status-led {
+  width: 6px;
+  height: 6px;
+  display: block;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.2),
+    0 0 2px rgba(255,255,255,0.12);
+}
+
+body.theme-winamp .wa-status-led-green {
+  background: linear-gradient(180deg, #baff88 0%, #28e51e 100%);
+}
+
+body.theme-winamp .wa-status-led-red {
+  background: linear-gradient(180deg, #e36d6d 0%, #772626 100%);
+}
+
+body.theme-winamp .wa-play-indicator {
+  width: 0;
+  height: 0;
+  margin: 0 0 2px 7px;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 11px solid #2d551d;
+  filter: drop-shadow(0 0 1px rgba(0, 255, 0, 0.25));
+  opacity: 0.55;
+  transition: opacity 0.12s linear, border-left-color 0.12s linear;
+}
+
+body.theme-winamp .wa-play-indicator.is-playing {
+  border-left-color: #32ff1a;
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 2px rgba(84, 255, 70, 0.8))
+    drop-shadow(0 0 5px rgba(84, 255, 70, 0.3));
+}
+
+body.theme-winamp .wa-status-scale {
+  position: absolute;
+  left: 0;
+  bottom: 1px;
+  width: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+body.theme-winamp .wa-status-scale span {
+  width: 8px;
+  height: 2px;
+  background: linear-gradient(180deg, #7584a6 0%, #38425e 100%);
+  opacity: 0.85;
+}
+
+/* TEMPO MATRIZ */
+body.theme-winamp .wa-time-matrix {
+  position: absolute;
+  left: 35px;
+  top: 4px;
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  z-index: 4;
+}
+
+body.theme-winamp .wa-glyph {
+  display: grid;
+  grid-template-columns: repeat(var(--glyph-cols), 3px);
+  grid-template-rows: repeat(var(--glyph-rows), 3px);
   gap: 1px;
 }
 
-body.theme-winamp .wa-spectrum-bars span {
+body.theme-winamp .wa-glyph.is-colon {
+  margin-top: 0;
+}
+
+body.theme-winamp .wa-dot {
   width: 3px;
-  height: 12%;
-  background:
-    linear-gradient(
-      180deg,
-      #fff35c 0%,
-      #d8ff4a 26%,
-      #44ff23 58%,
-      #009c38 100%
-    );
-  box-shadow: 0 0 2px rgba(68, 255, 35, 0.5);
-  opacity: 0.55;
-  transform-origin: bottom;
-  transition:
-    height 80ms linear,
-    opacity 80ms linear;
+  height: 3px;
+  background: rgba(26, 64, 20, 0.22);
+  border-radius: 0;
 }
 
-body.theme-winamp .wa-spectrum-bars.is-paused span {
-  opacity: 0.42;
+body.theme-winamp .wa-dot.on {
+  background: #49ff28;
+  box-shadow:
+    0 0 2px rgba(73, 255, 40, 0.9),
+    0 0 5px rgba(73, 255, 40, 0.28);
 }
 
-body.theme-winamp .wa-time-display {
+/* SPECTRUM */
+body.theme-winamp .wa-spectrum-panel {
   position: absolute;
-  left: 65px;
-  top: 0;
-  width: 70px;
-  height: 43px;
+  left: 7px;
+  right: 6px;
+  bottom: 4px;
+  height: 20px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  color: #caffcf;
-  font-family: "Courier New", monospace;
-  font-size: 22px;
-  line-height: 1;
-  font-weight: 900;
-  letter-spacing: -2px;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  text-shadow:
-    0 0 2px rgba(124, 255, 124, 0.95),
-    0 0 6px rgba(0, 255, 80, 0.45),
-    1px 1px 0 #002b0c;
+  align-items: flex-end;
+  gap: 1px;
+  z-index: 2;
 }
 
+body.theme-winamp .wa-spectrum-column {
+  position: relative;
+  width: 4px;
+  height: 20px;
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  gap: 0;
+}
+
+body.theme-winamp .wa-spectrum-block {
+  width: 4px;
+  height: 2px;
+  margin-top: 0;
+  background: rgba(28, 42, 74, 0.23);
+  opacity: 0.2;
+}
+
+body.theme-winamp .wa-spectrum-block[data-tone="blue"].active {
+  background: linear-gradient(180deg, #90ebff 0%, #43a8ff 100%);
+  opacity: 1;
+  box-shadow: 0 0 2px rgba(67, 168, 255, 0.55);
+}
+
+body.theme-winamp .wa-spectrum-block[data-tone="white"].active {
+  background: linear-gradient(180deg, #ffffff 0%, #dde4ff 100%);
+  opacity: 1;
+  box-shadow: 0 0 2px rgba(255, 255, 255, 0.4);
+}
+
+body.theme-winamp .wa-spectrum-block[data-tone="green"].active {
+  background: linear-gradient(180deg, #d8ff63 0%, #48ff2b 100%);
+  opacity: 1;
+  box-shadow: 0 0 2px rgba(72, 255, 43, 0.5);
+}
+
+body.theme-winamp .wa-spectrum-block[data-tone="yellow"].active {
+  background: linear-gradient(180deg, #fffab4 0%, #ffe85a 100%);
+  opacity: 1;
+  box-shadow: 0 0 2px rgba(255, 232, 90, 0.45);
+}
+
+body.theme-winamp .wa-spectrum-peak {
+  position: absolute;
+  left: 0;
+  width: 4px;
+  height: 2px;
+  background: linear-gradient(180deg, #ffffff 0%, #bff0ff 100%);
+  box-shadow:
+    0 0 2px rgba(255,255,255,0.8),
+    0 0 4px rgba(100, 210, 255, 0.35);
+  opacity: 0;
+}
+
+/* TRACK INFO */
 body.theme-winamp .wa-track-info {
   min-width: 0;
 }
@@ -771,7 +891,7 @@ body.theme-winamp .wa-meta-text {
 }
 
 body.theme-winamp .wa-meta-text.active {
-  color: var(--wa-lime);
+  color: #d8ff56;
 }
 
 body.theme-winamp .wa-seek-row {
@@ -820,6 +940,7 @@ body.theme-winamp .wa-volumebar span {
   left: 75%;
 }
 
+/* BOTÕES */
 body.theme-winamp .wa-button-row {
   margin-top: 7px;
   gap: 3px;
@@ -1024,7 +1145,7 @@ body.theme-winamp .wa-playlist-list li {
   display: flex;
   justify-content: space-between;
   gap: 7px;
-  color: var(--wa-green);
+  color: #00ff45;
   font-family: Tahoma, Arial, sans-serif;
   font-size: 11px;
   line-height: 1.45;
@@ -1095,7 +1216,7 @@ body.theme-winamp .wa-status-bar {
   display: flex;
   justify-content: space-between;
   gap: 5px;
-  color: var(--wa-green);
+  color: #00ff45;
   font-family: "Courier New", monospace;
   font-size: 8px;
   font-weight: 700;

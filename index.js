@@ -10,6 +10,111 @@ const STORAGE_KEYS = {
   currentTrackId: "player-current-track-id",
 };
 
+const DOT_MATRIX_MAP = {
+  "0": [
+    "01110",
+    "10001",
+    "10011",
+    "10101",
+    "11001",
+    "10001",
+    "01110",
+  ],
+  "1": [
+    "00100",
+    "01100",
+    "00100",
+    "00100",
+    "00100",
+    "00100",
+    "01110",
+  ],
+  "2": [
+    "01110",
+    "10001",
+    "00001",
+    "00110",
+    "01000",
+    "10000",
+    "11111",
+  ],
+  "3": [
+    "11110",
+    "00001",
+    "00001",
+    "01110",
+    "00001",
+    "00001",
+    "11110",
+  ],
+  "4": [
+    "00010",
+    "00110",
+    "01010",
+    "10010",
+    "11111",
+    "00010",
+    "00010",
+  ],
+  "5": [
+    "11111",
+    "10000",
+    "10000",
+    "11110",
+    "00001",
+    "00001",
+    "11110",
+  ],
+  "6": [
+    "01110",
+    "10000",
+    "10000",
+    "11110",
+    "10001",
+    "10001",
+    "01110",
+  ],
+  "7": [
+    "11111",
+    "00001",
+    "00010",
+    "00100",
+    "01000",
+    "01000",
+    "01000",
+  ],
+  "8": [
+    "01110",
+    "10001",
+    "10001",
+    "01110",
+    "10001",
+    "10001",
+    "01110",
+  ],
+  "9": [
+    "01110",
+    "10001",
+    "10001",
+    "01111",
+    "00001",
+    "00001",
+    "01110",
+  ],
+  ":": [
+    "00",
+    "11",
+    "11",
+    "00",
+    "11",
+    "11",
+    "00",
+  ],
+};
+
+const SPECTRUM_COLUMN_COUNT = 26;
+const SPECTRUM_BLOCK_COUNT = 10;
+
 const tracks = audios.map((item, index) => ({
   id: Number(item.id ?? index + 1),
   title: item.title || "Sem título",
@@ -49,14 +154,17 @@ const elements = {
 
   waPlaylist: document.getElementById("wa-playlist"),
   waTrackTitle: document.getElementById("wa-track-title"),
-  waCurrentTime: document.getElementById("wa-current-time"),
   waStatusTime: document.getElementById("wa-status-time"),
   waTotalPlaylist: document.getElementById("wa-total-playlist"),
   waSeekbar: document.getElementById("wa-seekbar"),
   waSeekThumb: document.getElementById("wa-seek-thumb"),
   waVolumebar: document.getElementById("wa-volumebar"),
   waVolumeThumb: document.getElementById("wa-volume-thumb"),
-  waSpectrumBars: document.getElementById("wa-spectrum-bars"),
+  waTimeMatrix: document.getElementById("wa-time-matrix"),
+  waSpectrum: document.getElementById("wa-spectrum"),
+  waPlayIndicator: document.getElementById("wa-play-indicator"),
+  waBitrateBox: document.getElementById("wa-bitrate-box"),
+  waKhzBox: document.getElementById("wa-khz-box"),
 
   waPrev: document.getElementById("wa-prev"),
   waPlay: document.getElementById("wa-play"),
@@ -75,6 +183,12 @@ let mediaElementSource = null;
 let frequencyData = null;
 let visualizerFrameId = null;
 
+let lastRenderedMatrixTime = "";
+let spectrumColumns = [];
+let smoothedLevels = new Array(SPECTRUM_COLUMN_COUNT).fill(0);
+let peakLevels = new Array(SPECTRUM_COLUMN_COUNT).fill(0);
+let peakHoldFrames = new Array(SPECTRUM_COLUMN_COUNT).fill(0);
+
 function assertRequiredElements() {
   const missing = Object.entries(elements)
     .filter(([, element]) => !element)
@@ -86,7 +200,7 @@ function assertRequiredElements() {
 }
 
 function formatTime(seconds) {
-  if (!Number.isFinite(seconds) || seconds <= 0) {
+  if (!Number.isFinite(seconds) || seconds < 0) {
     return "00:00";
   }
 
@@ -219,21 +333,22 @@ function loadTrack(index) {
   `;
 
   elements.waTrackTitle.textContent = `${track.id}. ${getTrackDisplayName(track)} (${track.duration || "--:--"})`;
+  elements.waBitrateBox.textContent = "192 kbps";
+  elements.waKhzBox.textContent = "44 kHz";
 
   elements.classicSeek.value = 0;
   elements.classicCurrentTime.textContent = "00:00";
   elements.classicDuration.textContent = track.duration || "--:--";
 
-  elements.waCurrentTime.textContent = "00:00";
+  renderMatrixTime("00:00");
   elements.waStatusTime.textContent = `00:00/${track.duration || "--:--"}`;
   elements.waSeekThumb.style.left = "0%";
 
   resetVisualizer();
-
   showStatus("");
   saveCurrentTrack();
   renderPlaylist();
-  updatePlayIcon();
+  updatePlayStateVisuals();
 }
 
 function setCurrentTrackById(id, shouldPlay = false) {
@@ -251,6 +366,84 @@ function setCurrentTrackById(id, shouldPlay = false) {
   }
 }
 
+function buildDotMatrixGlyph(character) {
+  const pattern = DOT_MATRIX_MAP[character] || DOT_MATRIX_MAP["0"];
+  const glyph = document.createElement("div");
+  glyph.className = `wa-glyph ${character === ":" ? "is-colon" : "is-digit"}`;
+
+  const rows = pattern.length;
+  const cols = pattern[0].length;
+
+  glyph.style.setProperty("--glyph-cols", cols);
+  glyph.style.setProperty("--glyph-rows", rows);
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const dot = document.createElement("span");
+      dot.className = `wa-dot ${pattern[row][col] === "1" ? "on" : ""}`;
+      glyph.appendChild(dot);
+    }
+  }
+
+  return glyph;
+}
+
+function renderMatrixTime(timeString) {
+  if (lastRenderedMatrixTime === timeString) {
+    return;
+  }
+
+  elements.waTimeMatrix.innerHTML = "";
+
+  [...timeString].forEach((character) => {
+    elements.waTimeMatrix.appendChild(buildDotMatrixGlyph(character));
+  });
+
+  lastRenderedMatrixTime = timeString;
+}
+
+function buildSpectrum() {
+  elements.waSpectrum.innerHTML = "";
+  spectrumColumns = [];
+
+  for (let i = 0; i < SPECTRUM_COLUMN_COUNT; i++) {
+    const column = document.createElement("div");
+    column.className = "wa-spectrum-column";
+
+    const peak = document.createElement("span");
+    peak.className = "wa-spectrum-peak";
+
+    const blocks = [];
+
+    for (let j = 0; j < SPECTRUM_BLOCK_COUNT; j++) {
+      const block = document.createElement("span");
+      block.className = "wa-spectrum-block";
+
+      if (j <= 1) {
+        block.dataset.tone = "blue";
+      } else if (j <= 4) {
+        block.dataset.tone = "white";
+      } else if (j <= 7) {
+        block.dataset.tone = "green";
+      } else {
+        block.dataset.tone = "yellow";
+      }
+
+      blocks.push(block);
+      column.appendChild(block);
+    }
+
+    column.appendChild(peak);
+    elements.waSpectrum.appendChild(column);
+
+    spectrumColumns.push({
+      element: column,
+      peak,
+      blocks,
+    });
+  }
+}
+
 async function initAudioAnalyzer() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
 
@@ -262,8 +455,8 @@ async function initAudioAnalyzer() {
     audioContext = new AudioContextClass();
 
     analyserNode = audioContext.createAnalyser();
-    analyserNode.fftSize = 256;
-    analyserNode.smoothingTimeConstant = 0.78;
+    analyserNode.fftSize = 512;
+    analyserNode.smoothingTimeConstant = 0.58;
 
     frequencyData = new Uint8Array(analyserNode.frequencyBinCount);
 
@@ -277,23 +470,54 @@ async function initAudioAnalyzer() {
   }
 }
 
-function getAverageFrequency(start, end) {
+function getAverageBinValue(startBin, endBin) {
   if (!frequencyData || !frequencyData.length) {
     return 0;
   }
 
-  const safeStart = Math.max(0, Math.min(start, frequencyData.length - 1));
-  const safeEnd = Math.max(safeStart + 1, Math.min(end, frequencyData.length));
+  const start = Math.max(0, Math.min(startBin, frequencyData.length - 1));
+  const end = Math.max(start + 1, Math.min(endBin, frequencyData.length));
 
-  let total = 0;
+  let sum = 0;
   let count = 0;
 
-  for (let i = safeStart; i < safeEnd; i++) {
-    total += frequencyData[i];
+  for (let i = start; i < end; i++) {
+    sum += frequencyData[i];
     count++;
   }
 
-  return count ? total / count : 0;
+  return count ? sum / count : 0;
+}
+
+function getLogFrequencyRange(columnIndex, totalColumns, maxBin) {
+  const minFreqIndex = 1;
+  const maxFreqIndex = maxBin - 1;
+
+  const startNorm = columnIndex / totalColumns;
+  const endNorm = (columnIndex + 1) / totalColumns;
+
+  const start = Math.floor(minFreqIndex + (Math.pow(startNorm, 2.15) * (maxFreqIndex - minFreqIndex)));
+  const end = Math.floor(minFreqIndex + (Math.pow(endNorm, 2.15) * (maxFreqIndex - minFreqIndex)));
+
+  return {
+    start: Math.max(1, start),
+    end: Math.max(start + 1, end),
+  };
+}
+
+function updateSpectrumDisplay(levels, peaks) {
+  spectrumColumns.forEach((column, columnIndex) => {
+    const activeBlocks = Math.max(0, Math.min(SPECTRUM_BLOCK_COUNT, Math.round(levels[columnIndex])));
+    const peakBlock = Math.max(0, Math.min(SPECTRUM_BLOCK_COUNT - 1, Math.round(peaks[columnIndex])));
+
+    column.blocks.forEach((block, blockIndex) => {
+      const isActive = blockIndex < activeBlocks;
+      block.classList.toggle("active", isActive);
+    });
+
+    column.peak.style.opacity = peaks[columnIndex] > 0.2 ? "1" : "0";
+    column.peak.style.bottom = `${Math.max(0, peakBlock * 2)}px`;
+  });
 }
 
 function animateVisualizer() {
@@ -303,40 +527,54 @@ function animateVisualizer() {
 
   analyserNode.getByteFrequencyData(frequencyData);
 
-  const bars = elements.waSpectrumBars.querySelectorAll("span");
-  const barCount = bars.length;
   const binCount = frequencyData.length;
 
-  const bassEnergy = getAverageFrequency(1, 10);
-  const midEnergy = getAverageFrequency(10, 45);
-  const highEnergy = getAverageFrequency(45, 95);
+  const bassEnergy = getAverageBinValue(1, 12);
+  const midEnergy = getAverageBinValue(12, 60);
+  const highEnergy = getAverageBinValue(60, 130);
 
-  bars.forEach((bar, index) => {
-    const startRatio = index / barCount;
-    const endRatio = (index + 1) / barCount;
+  const musicalPulse =
+    ((bassEnergy * 1.3) + (midEnergy * 0.95) + (highEnergy * 0.6)) / (1.3 + 0.95 + 0.6);
 
-    const startBin = Math.floor(Math.pow(startRatio, 1.8) * binCount);
-    const endBin = Math.max(startBin + 1, Math.floor(Math.pow(endRatio, 1.8) * binCount));
+  for (let i = 0; i < SPECTRUM_COLUMN_COUNT; i++) {
+    const range = getLogFrequencyRange(i, SPECTRUM_COLUMN_COUNT, binCount);
+    const columnEnergy = getAverageBinValue(range.start, range.end);
 
-    const rawValue = getAverageFrequency(startBin, endBin);
+    let weighted = columnEnergy;
 
-    const rhythmWeight = index < 5
-      ? bassEnergy * 0.38
-      : index < 11
-        ? midEnergy * 0.28
-        : highEnergy * 0.22;
+    if (i < 6) {
+      weighted = (columnEnergy * 0.75) + (bassEnergy * 0.55);
+    } else if (i < 18) {
+      weighted = (columnEnergy * 0.82) + (midEnergy * 0.28);
+    } else {
+      weighted = (columnEnergy * 0.88) + (highEnergy * 0.24);
+    }
 
-    const mixedValue = rawValue * 0.72 + rhythmWeight;
-    const normalized = Math.max(0, Math.min(1, mixedValue / 255));
+    const normalized = Math.max(0, Math.min(1, Math.pow(weighted / 255, 0.82)));
+    const pulseBoost = (musicalPulse / 255) * 0.85;
+    const targetLevel = Math.max(0, Math.min(SPECTRUM_BLOCK_COUNT, (normalized * (SPECTRUM_BLOCK_COUNT - 0.15)) + (pulseBoost * 0.55)));
 
-    const minimumHeight = elements.audio.paused ? 8 : 12;
-    const height = minimumHeight + normalized * 88;
+    const currentLevel = smoothedLevels[i];
 
-    bar.style.height = `${height}%`;
-    bar.style.opacity = `${0.45 + normalized * 0.55}`;
-    bar.style.setProperty("--bar-energy", normalized.toFixed(3));
-  });
+    if (targetLevel > currentLevel) {
+      smoothedLevels[i] = currentLevel + ((targetLevel - currentLevel) * 0.55);
+    } else {
+      smoothedLevels[i] = currentLevel - Math.min(0.18, currentLevel - targetLevel);
+    }
 
+    smoothedLevels[i] = Math.max(0, Math.min(SPECTRUM_BLOCK_COUNT, smoothedLevels[i]));
+
+    if (smoothedLevels[i] >= peakLevels[i]) {
+      peakLevels[i] = smoothedLevels[i];
+      peakHoldFrames[i] = 7;
+    } else if (peakHoldFrames[i] > 0) {
+      peakHoldFrames[i]--;
+    } else {
+      peakLevels[i] = Math.max(smoothedLevels[i], peakLevels[i] - 0.14);
+    }
+  }
+
+  updateSpectrumDisplay(smoothedLevels, peakLevels);
   visualizerFrameId = requestAnimationFrame(animateVisualizer);
 }
 
@@ -345,7 +583,6 @@ function startVisualizer() {
     return;
   }
 
-  elements.waSpectrumBars.classList.remove("is-paused");
   visualizerFrameId = requestAnimationFrame(animateVisualizer);
 }
 
@@ -354,20 +591,13 @@ function stopVisualizer() {
     cancelAnimationFrame(visualizerFrameId);
     visualizerFrameId = null;
   }
-
-  elements.waSpectrumBars.classList.add("is-paused");
 }
 
 function resetVisualizer() {
-  const bars = elements.waSpectrumBars.querySelectorAll("span");
-
-  bars.forEach((bar, index) => {
-    const idleHeight = 12 + ((index * 7) % 22);
-
-    bar.style.height = `${idleHeight}%`;
-    bar.style.opacity = "0.45";
-    bar.style.setProperty("--bar-energy", "0");
-  });
+  smoothedLevels = new Array(SPECTRUM_COLUMN_COUNT).fill(0);
+  peakLevels = new Array(SPECTRUM_COLUMN_COUNT).fill(0);
+  peakHoldFrames = new Array(SPECTRUM_COLUMN_COUNT).fill(0);
+  updateSpectrumDisplay(smoothedLevels, peakLevels);
 }
 
 async function playTrack() {
@@ -426,16 +656,11 @@ function previousSong() {
   setCurrentTrackById(filteredTracks[previousIndex].id, true);
 }
 
-function updatePlayIcon() {
+function updatePlayStateVisuals() {
   const isPaused = elements.audio.paused;
 
   elements.classicPlayIcon.textContent = isPaused ? "play_arrow" : "pause";
-
-  if (isPaused) {
-    elements.waSpectrumBars.classList.add("is-paused");
-  } else {
-    elements.waSpectrumBars.classList.remove("is-paused");
-  }
+  elements.waPlayIndicator.classList.toggle("is-playing", !isPaused);
 }
 
 function updateCurrentTrackDuration() {
@@ -466,7 +691,7 @@ function updateTimeDisplay() {
   elements.classicCurrentTime.textContent = current;
   elements.classicDuration.textContent = total;
 
-  elements.waCurrentTime.textContent = current;
+  renderMatrixTime(current);
   elements.waStatusTime.textContent = `${current}/${total}`;
 
   if (Number.isFinite(elements.audio.duration) && elements.audio.duration > 0) {
@@ -607,12 +832,12 @@ function bindEvents() {
   });
 
   elements.audio.addEventListener("play", () => {
-    updatePlayIcon();
+    updatePlayStateVisuals();
     startVisualizer();
   });
 
   elements.audio.addEventListener("pause", () => {
-    updatePlayIcon();
+    updatePlayStateVisuals();
     stopVisualizer();
   });
 
@@ -657,6 +882,8 @@ function start() {
     return;
   }
 
+  buildDotMatrixGlyph("0");
+  buildSpectrum();
   populateCategories();
   initTheme();
   restoreState();
@@ -664,6 +891,7 @@ function start() {
   loadTrack(currentTrackIndex);
   applyFilters();
   resetVisualizer();
+  renderMatrixTime("00:00");
 }
 
 start();
