@@ -4,295 +4,39 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Player de Áudio</title>
+  <title>Winamp Project Codex</title>
 
   <link rel="icon" href="data:,">
-
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/material-design-icons/3.0.1/iconfont/material-icons.min.css"
-  >
-
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
-  >
-
   <link rel="stylesheet" href="./style.css" />
 </head>
 
 <body>
-  <div class="container">
+  <main class="page-shell">
 
-    <!--
-    <aside class="sidebar left-sidebar">
-      Área de anúncio esquerda
-    </aside>
-    -->
-
-    <main class="main-content">
-      <div class="theme-wrapper">
-
-        <div class="layout-theme-area">
-          <span class="theme-label">Clássico</span>
-
-          <label class="lamp-switch" title="Trocar layout">
-            <input type="checkbox" id="theme-toggle">
-            <span class="lamp-track">
-              <span class="lamp-bulb"></span>
-            </span>
-          </label>
-
-          <span class="theme-label">Winamp</span>
-        </div>
-
-        <div class="filter-panel">
-          <input
-            type="search"
-            id="search-input"
-            placeholder="Buscar música ou artista..."
-            autocomplete="off"
-          >
-
-          <select id="category-filter">
-            <option value="all">Todas as categorias</option>
-          </select>
-
-          <div id="playlist-count">0 faixas</div>
-        </div>
-
-        <!-- PLAYER CLÁSSICO -->
-        <section id="player">
-          <div class="card">
-            <h4 id="classic-title">Player</h4>
-
-            <div id="classic-artist">Artista</div>
-
-            <div id="now-playing-category">Categoria</div>
-
-            <div class="card-image" id="classic-cover"></div>
-
-            <div class="card-content">
-              <audio id="audio" preload="metadata"></audio>
-
-              <div class="classic-time-row">
-                <span id="classic-current-time">00:00</span>
-                <span id="classic-duration">00:00</span>
-              </div>
-
-              <input
-                type="range"
-                id="classic-seek"
-                min="0"
-                max="100"
-                value="0"
-              >
-
-              <div id="player-controls" class="center-align">
-                <button id="previous-track" class="btn-floating waves-effect waves-light" type="button">
-                  <i class="material-icons">skip_previous</i>
-                </button>
-
-                <button id="play-pause" class="btn-floating btn-large waves-effect waves-light" type="button">
-                  <i class="material-icons" id="classic-play-icon">play_arrow</i>
-                </button>
-
-                <button id="next-track" class="btn-floating waves-effect waves-light" type="button">
-                  <i class="material-icons">skip_next</i>
-                </button>
-              </div>
-
-              <div class="change-tracks">
-                <button id="volume-button" type="button" aria-label="Ativar ou desativar volume">
-                  <i id="volume-icon" class="material-icons">volume_up</i>
-                </button>
-
-                <input id="volume" type="range" min="0" max="100" value="80">
-              </div>
-
-              <div id="player-status"></div>
-            </div>
-          </div>
-        </section>
-
-        <!-- PLAYER WINAMP -->
-        <section class="winamp-shell">
-
-          <!-- MAIN -->
-          <div class="wa-window wa-main-player">
-            <div class="wa-titlebar">
-              <span>WINAMP</span>
-
-              <div class="wa-title-buttons">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-
-            <div class="wa-main-body">
-
-              <div class="wa-top-row">
-
-                <!-- VISOR ÚNICO -->
-                <div class="wa-combo-display" id="wa-combo-display">
-
-                  <div class="wa-display-status">
-                    <div class="wa-status-top">
-                      <span class="wa-status-led wa-status-led-green"></span>
-                      <span class="wa-status-led wa-status-led-red"></span>
-                    </div>
-
-                    <div class="wa-play-indicator" id="wa-play-indicator" aria-hidden="true"></div>
-
-                    <div class="wa-status-scale" aria-hidden="true">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
-                  </div>
-
-                  <div class="wa-time-matrix" id="wa-time-matrix" aria-label="Tempo atual"></div>
-
-                  <div class="wa-spectrum-panel" id="wa-spectrum" aria-hidden="true"></div>
-                </div>
-
-                <div class="wa-track-info">
-                  <div class="wa-track-title" id="wa-track-title">
-                    1. Música
-                  </div>
-
-                  <div class="wa-meta-row">
-                    <span class="wa-meta-box" id="wa-bitrate-box">192 kbps</span>
-                    <span class="wa-meta-box" id="wa-khz-box">44 kHz</span>
-                    <span class="wa-meta-text">mono</span>
-                    <span class="wa-meta-text active">stereo</span>
-                  </div>
-
-                  <div class="wa-seek-row">
-                    <div class="wa-seekbar" id="wa-seekbar">
-                      <span id="wa-seek-thumb"></span>
-                    </div>
-
-                    <div class="wa-volumebar" id="wa-volumebar">
-                      <span id="wa-volume-thumb"></span>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              <div class="wa-button-row">
-                <button class="wa-small-btn" id="wa-prev" type="button" aria-label="Anterior">◀◀</button>
-                <button class="wa-small-btn" id="wa-play" type="button" aria-label="Play">▶</button>
-                <button class="wa-small-btn" id="wa-pause" type="button" aria-label="Pause">❚❚</button>
-                <button class="wa-small-btn" id="wa-stop" type="button" aria-label="Stop">■</button>
-                <button class="wa-small-btn" id="wa-next" type="button" aria-label="Próxima">▶▶</button>
-
-                <div class="wa-main-actions">
-                  <button class="wa-mini-btn" type="button">EQ</button>
-                  <button class="wa-mini-btn" type="button">PL</button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- EQUALIZER -->
-          <div class="wa-window wa-eq">
-            <div class="wa-titlebar">
-              <span>WINAMP EQUALIZER</span>
-
-              <div class="wa-title-buttons">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-
-            <div class="wa-eq-body">
-              <div class="wa-eq-left">
-                <div class="wa-toggle-row">
-                  <button class="wa-mini-btn on" type="button">ON</button>
-                  <button class="wa-mini-btn" type="button">AUTO</button>
-                </div>
-
-                <div class="wa-preamp-label">-12db</div>
-
-                <div class="wa-preamp">
-                  <div class="wa-slider vertical">
-                    <span></span>
-                  </div>
-                </div>
-
-                <div class="wa-preamp-bottom">PREAMP</div>
-              </div>
-
-              <div class="wa-eq-bands">
-                <div class="wa-band"><div class="wa-slider vertical"><span></span></div><small>70</small></div>
-                <div class="wa-band"><div class="wa-slider vertical"><span></span></div><small>180</small></div>
-                <div class="wa-band"><div class="wa-slider vertical"><span></span></div><small>320</small></div>
-                <div class="wa-band"><div class="wa-slider vertical"><span></span></div><small>600</small></div>
-                <div class="wa-band"><div class="wa-slider vertical"><span></span></div><small>1K</small></div>
-                <div class="wa-band"><div class="wa-slider vertical"><span></span></div><small>3K</small></div>
-                <div class="wa-band"><div class="wa-slider vertical"><span></span></div><small>6K</small></div>
-                <div class="wa-band"><div class="wa-slider vertical"><span></span></div><small>12K</small></div>
-                <div class="wa-band"><div class="wa-slider vertical"><span></span></div><small>14K</small></div>
-                <div class="wa-band"><div class="wa-slider vertical"><span></span></div><small>16K</small></div>
-              </div>
-
-              <div class="wa-eq-right">
-                <button class="wa-mini-btn" type="button">PRESETS</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- PLAYLIST -->
-          <div class="wa-window wa-playlist">
-            <div class="wa-titlebar">
-              <span>WINAMP PLAYLIST</span>
-
-              <div class="wa-title-buttons">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-
-            <div class="wa-playlist-body">
-              <ol class="wa-playlist-list" id="wa-playlist"></ol>
-
-              <div class="wa-playlist-footer">
-                <div class="wa-footer-buttons">
-                  <button class="wa-mini-btn" type="button">ADD</button>
-                  <button class="wa-mini-btn" type="button">REM</button>
-                  <button class="wa-mini-btn" type="button">SEL</button>
-                  <button class="wa-mini-btn" type="button">MISC</button>
-                </div>
-
-                <div class="wa-status-bar">
-                  <span id="wa-status-time">00:00/00:00</span>
-                  <span id="wa-total-playlist">0 FX</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </section>
-
+    <section class="project-header">
+      <div>
+        <h1>Winamp Project Codex</h1>
+        <p>Base 2.91 + músicas do projeto atual</p>
       </div>
-    </main>
 
-    <!--
-    <aside class="sidebar right-sidebar">
-      Área de anúncio direita
-    </aside>
-    -->
+      <div class="project-badge" id="track-count">
+        Carregando...
+      </div>
+    </section>
 
-  </div>
+    <section class="webamp-stage">
+      <div id="webamp-container"></div>
+    </section>
 
+    <section class="project-footer">
+      <p id="player-status">
+        Inicializando Webamp...
+      </p>
+    </section>
+
+  </main>
+
+  <script src="https://unpkg.com/webamp"></script>
   <script type="module" src="./index.js"></script>
 </body>
 </html>
