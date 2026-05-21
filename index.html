@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Hippodromo, o resgate!</title>
+  <title>Winamp Project Codex</title>
 
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./style.css" />
@@ -15,8 +15,8 @@
 
     <section class="project-header">
       <div>
-        <h1>Hippodromo, o resgate!</h1>
-        <p>A Hippodromo foi uma das casas noturnas mais icônicas de Belo Horizonte nos anos 90. Funcionando no espaço do antigo Cine Alvorada, recebia até 1,6 mil pessoas e foi um grande marco na vida noturna da capital mineira.</p>
+        <h1>Winamp Project Codex</h1>
+        <p>Base 2.91 + músicas do projeto atual</p>
       </div>
 
       <div class="project-badge" id="track-count">
@@ -32,11 +32,22 @@
       <p id="player-status">
         Inicializando Webamp...
       </p>
+
+      <details class="download-panel">
+        <summary>
+          Baixar músicas
+          <span id="download-count">0 arquivos</span>
+        </summary>
+
+        <div class="download-list" id="download-list">
+          Carregando lista...
+        </div>
+      </details>
     </section>
 
   </main>
 
-  <script src="https://unpkg.com/webamp@1.4.2/built/webamp.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/webamp@2.2.0/built/webamp.bundle.min.js"></script>
   <script type="module" src="./index.js"></script>
 </body>
 </html>

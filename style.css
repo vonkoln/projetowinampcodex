@@ -140,6 +140,130 @@ select {
   color: var(--error);
 }
 
+/* ========================================================= */
+/* DOWNLOAD DISCRETO */
+/* ========================================================= */
+
+.download-panel {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+  text-align: left;
+}
+
+.download-panel summary {
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+  font-weight: 700;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  user-select: none;
+}
+
+.download-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.download-panel summary::before {
+  content: "▸";
+  color: var(--accent);
+  margin-right: 4px;
+  font-size: 10px;
+}
+
+.download-panel[open] summary::before {
+  content: "▾";
+}
+
+#download-count {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.download-list {
+  margin-top: 8px;
+  max-height: 190px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.download-item {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 4px;
+  color: rgba(255, 255, 255, 0.76);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.download-item:hover {
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.download-index {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.download-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.download-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.download-info small {
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.download-duration {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.download-empty {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.download-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.download-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.download-list::-webkit-scrollbar-thumb {
+  background: rgba(236, 210, 123, 0.38);
+}
+
 @media (max-width: 480px) {
   .page-shell {
     padding: 14px 8px;
@@ -161,5 +285,9 @@ select {
   #webamp-container {
     width: 300px;
     min-height: 560px;
+  }
+
+  .project-footer {
+    max-width: 320px;
   }
 }

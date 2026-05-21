@@ -7,6 +7,8 @@ const elements = {
   container: document.getElementById("webamp-container"),
   status: document.getElementById("player-status"),
   trackCount: document.getElementById("track-count"),
+  downloadList: document.getElementById("download-list"),
+  downloadCount: document.getElementById("download-count"),
 };
 
 function setStatus(message, type = "info") {
@@ -71,6 +73,61 @@ function getInitialTracks() {
     .filter(Boolean);
 }
 
+function getSafeFileName(item, index) {
+  const artist = item.artist || "Artista";
+  const title = item.title || `Faixa ${index + 1}`;
+  const extension = item.file?.split(".").pop() || "mp3";
+
+  return `${String(index + 1).padStart(2, "0")} - ${artist} - ${title}.${extension}`
+    .replace(/[\\/:*?"<>|]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function renderDownloadList() {
+  const validAudios = audios.filter((item) => item.file);
+
+  elements.downloadCount.textContent = `${validAudios.length} arquivo${validAudios.length === 1 ? "" : "s"}`;
+
+  if (!validAudios.length) {
+    elements.downloadList.innerHTML = `
+      <p class="download-empty">Nenhum arquivo disponível para download.</p>
+    `;
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  validAudios.forEach((item, index) => {
+    const link = document.createElement("a");
+
+    const artist = item.artist || "Artista desconhecido";
+    const title = item.title || `Faixa ${index + 1}`;
+    const category = item.category || "Sem categoria";
+    const duration = item.duration || "--:--";
+
+    link.href = `${AUDIO_BASE_PATH}${item.file}`;
+    link.download = getSafeFileName(item, index);
+    link.className = "download-item";
+
+    link.innerHTML = `
+      <span class="download-index">${String(index + 1).padStart(2, "0")}</span>
+
+      <span class="download-info">
+        <strong>${title}</strong>
+        <small>${artist} · ${category}</small>
+      </span>
+
+      <span class="download-duration">${duration}</span>
+    `;
+
+    fragment.appendChild(link);
+  });
+
+  elements.downloadList.innerHTML = "";
+  elements.downloadList.appendChild(fragment);
+}
+
 function validateEnvironment() {
   if (!elements.container) {
     throw new Error("Container #webamp-container não encontrado.");
@@ -96,6 +153,7 @@ function updateTrackCount(tracks) {
 
 async function startWebamp() {
   try {
+    renderDownloadList();
     validateEnvironment();
 
     const tracks = getInitialTracks();
