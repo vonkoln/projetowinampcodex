@@ -11,6 +11,8 @@ const SKIN_PATH = "./skin/base-2.91.wsz";
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
 
+
+
 const elements = {
   container: document.getElementById("webamp-container"),
   status: document.getElementById("player-status"),
@@ -18,11 +20,11 @@ const elements = {
 
   downloadList: document.getElementById("download-list"),
   downloadCount: document.getElementById("download-count"),
-
-  rankingList: document.getElementById("ranking-list"),
-  rankingTotal: document.getElementById("ranking-total"),
   refreshRanking: document.getElementById("refresh-ranking"),
 };
+
+let globalRanking = [];
+let rankingByTrackKey = new Map();
 
 function setStatus(message, type = "info") {
   elements.status.textContent = message;
@@ -109,6 +111,13 @@ function getSafeFileName(item, index) {
     .trim();
 }
 
+function getTrackLabel(item, index) {
+  const artist = item.artist || "Artista desconhecido";
+  const title = item.title || `Faixa ${index + 1}`;
+
+  return `${artist} - ${title}`;
+}
+
 function createJsonpRequest(params, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("COLE_AQUI")) {
@@ -172,6 +181,55 @@ function createJsonpRequest(params, timeoutMs = 8000) {
   });
 }
 
+function updateRankingState(payload) {
+  globalRanking = Array.isArray(payload?.ranking) ? payload.ranking : [];
+
+  rankingByTrackKey = new Map();
+
+  globalRanking.forEach((item) => {
+    rankingByTrackKey.set(String(item.trackKey), {
+      ...item,
+      count: Number(item.count || 0),
+    });
+  });
+}
+
+function getGlobalDownloadCount(item, index) {
+  const key = getTrackKey(item, index);
+  const rankingItem = rankingByTrackKey.get(key);
+
+  return Number(rankingItem?.count || 0);
+}
+
+function getTotalGlobalDownloads() {
+  return audios.reduce((total, item, index) => {
+    if (!item.file) {
+      return total;
+    }
+
+    return total + getGlobalDownloadCount(item, index);
+  }, 0);
+}
+
+function getAudiosSortedByDownloads() {
+  return audios
+    .map((item, index) => ({
+      item,
+      index,
+      key: getTrackKey(item, index),
+      count: item.file ? getGlobalDownloadCount(item, index) : 0,
+      label: getTrackLabel(item, index),
+    }))
+    .filter((entry) => entry.item.file)
+    .sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+
+      return a.label.localeCompare(b.label, "pt-BR");
+    });
+}
+
 async function registerGlobalDownload(item, index) {
   const payload = await createJsonpRequest({
     action: "download",
@@ -183,16 +241,15 @@ async function registerGlobalDownload(item, index) {
     category: item.category || "Sem categoria",
   });
 
-  if (payload.ranking) {
-    renderRanking(payload);
-  }
+  updateRankingState(payload);
+  renderDownloadList();
 
   return payload;
 }
 
 async function fetchGlobalRanking() {
-  elements.rankingList.innerHTML = `
-    <p class="ranking-empty">Atualizando ranking global...</p>
+  elements.downloadList.innerHTML = `
+    <p class="download-empty">Atualizando lista por downloads globais...</p>
   `;
 
   try {
@@ -200,24 +257,30 @@ async function fetchGlobalRanking() {
       action: "ranking",
     });
 
-    renderRanking(payload);
+    updateRankingState(payload);
+    renderDownloadList();
   } catch (error) {
     console.error(error);
 
-    elements.rankingList.innerHTML = `
-      <p class="ranking-empty">Não foi possível carregar o ranking global.</p>
+    elements.downloadList.innerHTML = `
+      <p class="download-empty">
+        Não foi possível carregar os downloads globais. A lista será exibida em ordem alfabética.
+      </p>
     `;
 
-    elements.rankingTotal.textContent = "erro";
+    renderDownloadList();
   }
 }
 
 function renderDownloadList() {
-  const validAudios = audios.filter((item) => item.file);
+  const sortedAudios = getAudiosSortedByDownloads();
+  const totalFiles = sortedAudios.length;
+  const totalDownloads = getTotalGlobalDownloads();
 
-  elements.downloadCount.textContent = `${validAudios.length} arquivo${validAudios.length === 1 ? "" : "s"}`;
+  elements.downloadCount.textContent =
+    `${totalFiles} arquivo${totalFiles === 1 ? "" : "s"} · ${totalDownloads} download${totalDownloads === 1 ? "" : "s"}`;
 
-  if (!validAudios.length) {
+  if (!sortedAudios.length) {
     elements.downloadList.innerHTML = `
       <p class="download-empty">Nenhum arquivo disponível para download.</p>
     `;
@@ -226,7 +289,9 @@ function renderDownloadList() {
 
   const fragment = document.createDocumentFragment();
 
-  validAudios.forEach((item, index) => {
+  sortedAudios.forEach((entry, rankIndex) => {
+    const { item, index, count } = entry;
+
     const link = document.createElement("a");
 
     const artist = item.artist || "Artista desconhecido";
@@ -239,8 +304,12 @@ function renderDownloadList() {
     link.className = "download-item";
     link.dataset.trackKey = getTrackKey(item, index);
 
+    if (rankIndex === 0 && count > 0) {
+      link.classList.add("is-top-download");
+    }
+
     link.innerHTML = `
-      <span class="download-index">${String(index + 1).padStart(2, "0")}</span>
+      <span class="download-rank">${rankIndex + 1}</span>
 
       <span class="download-info">
         <strong>${title}</strong>
@@ -249,7 +318,7 @@ function renderDownloadList() {
 
       <span class="download-meta">
         <span class="download-duration">${duration}</span>
-        <span class="download-counter" data-counter-for="${getTrackKey(item, index)}">global</span>
+        <span class="download-counter">${count} download${count === 1 ? "" : "s"}</span>
       </span>
     `;
 
@@ -263,7 +332,7 @@ function renderDownloadList() {
         setStatus(`Download registrado: ${artist} - ${title}.`, "success");
       } catch (error) {
         console.error(error);
-        setStatus("Download iniciado, mas não foi possível registrar no ranking global.", "error");
+        setStatus("Download iniciado, mas não foi possível registrar no contador global.", "error");
       } finally {
         startFileDownload(link.href, link.download);
       }
@@ -286,67 +355,6 @@ function startFileDownload(url, fileName) {
   document.body.appendChild(link);
   link.click();
   link.remove();
-}
-
-function renderRanking(payload) {
-  const ranking = payload.ranking || [];
-  const totalDownloads = Number(payload.totalDownloads || 0);
-
-  elements.rankingTotal.textContent = `${totalDownloads} download${totalDownloads === 1 ? "" : "s"}`;
-
-  updateDownloadCounters(ranking);
-
-  const visibleRanking = ranking.filter((item) => Number(item.count || 0) > 0);
-
-  if (!visibleRanking.length) {
-    elements.rankingList.innerHTML = `
-      <p class="ranking-empty">Nenhum download registrado ainda.</p>
-    `;
-    return;
-  }
-
-  const fragment = document.createDocumentFragment();
-
-  visibleRanking.forEach((item, index) => {
-    const row = document.createElement("div");
-    row.className = "ranking-item";
-
-    const title = item.title || "Faixa sem título";
-    const artist = item.artist || "Artista desconhecido";
-    const category = item.category || "Sem categoria";
-    const count = Number(item.count || 0);
-
-    row.innerHTML = `
-      <span class="ranking-position">${index + 1}</span>
-
-      <span class="ranking-info">
-        <strong>${title}</strong>
-        <small>${artist} · ${category}</small>
-      </span>
-
-      <span class="ranking-count">${count}</span>
-    `;
-
-    fragment.appendChild(row);
-  });
-
-  elements.rankingList.innerHTML = "";
-  elements.rankingList.appendChild(fragment);
-}
-
-function updateDownloadCounters(ranking) {
-  const byKey = new Map();
-
-  ranking.forEach((item) => {
-    byKey.set(String(item.trackKey), Number(item.count || 0));
-  });
-
-  document.querySelectorAll("[data-counter-for]").forEach((counter) => {
-    const key = counter.dataset.counterFor;
-    const count = byKey.get(key) || 0;
-
-    counter.textContent = `${count} download${count === 1 ? "" : "s"}`;
-  });
 }
 
 function validateEnvironment() {
@@ -380,7 +388,6 @@ async function startWebamp() {
   try {
     bindActions();
     renderDownloadList();
-
     fetchGlobalRanking();
 
     validateEnvironment();

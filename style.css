@@ -133,19 +133,17 @@ select {
 }
 
 /* ========================================================= */
-/* PAINÉIS INFERIORES */
+/* ABA ÚNICA: DOWNLOADS + RANKING */
 /* ========================================================= */
 
-.download-panel,
-.ranking-panel {
+.download-panel {
   margin-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 8px;
   text-align: left;
 }
 
-.download-panel summary,
-.ranking-panel summary {
+.download-panel summary {
   cursor: pointer;
   color: rgba(255, 255, 255, 0.68);
   font-size: 11px;
@@ -158,42 +156,70 @@ select {
   user-select: none;
 }
 
-.download-panel summary::-webkit-details-marker,
-.ranking-panel summary::-webkit-details-marker {
+.download-panel summary::-webkit-details-marker {
   display: none;
 }
 
-.download-panel summary::before,
-.ranking-panel summary::before {
+.download-panel summary::before {
   content: "▸";
   color: var(--accent);
   margin-right: 4px;
   font-size: 10px;
 }
 
-.download-panel[open] summary::before,
-.ranking-panel[open] summary::before {
+.download-panel[open] summary::before {
   content: "▾";
 }
 
-#download-count,
-#ranking-total {
+#download-count {
   color: rgba(255, 255, 255, 0.48);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.download-panel-tools {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.download-hint {
+  color: rgba(255, 255, 255, 0.42);
   font-size: 10px;
   font-weight: 700;
 }
 
-.download-list,
-.ranking-list {
+.ranking-button {
+  padding: 5px 8px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.ranking-button:hover {
+  color: var(--accent);
+  border-color: rgba(236, 210, 123, 0.35);
+  background: rgba(236, 210, 123, 0.06);
+}
+
+.download-list {
   margin-top: 8px;
-  max-height: 190px;
+  max-height: 230px;
   overflow-y: auto;
   padding-right: 4px;
 }
 
 .download-item {
   display: grid;
-  grid-template-columns: 30px 1fr auto;
+  grid-template-columns: 28px 1fr auto;
   gap: 8px;
   align-items: center;
   padding: 6px 4px;
@@ -207,11 +233,25 @@ select {
   background: rgba(255, 255, 255, 0.045);
 }
 
-.download-index {
-  color: rgba(255, 255, 255, 0.38);
+.download-item.is-top-download {
+  background: linear-gradient(90deg, rgba(236, 210, 123, 0.08), transparent);
+}
+
+.download-item.is-top-download .download-rank,
+.download-item.is-top-download .download-counter {
+  color: var(--accent);
+}
+
+.download-rank {
+  width: 22px;
+  height: 22px;
+  color: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 10px;
-  font-weight: 800;
-  text-align: right;
+  font-weight: 900;
 }
 
 .download-info {
@@ -252,113 +292,29 @@ select {
 }
 
 .download-counter {
-  color: var(--accent);
+  color: var(--success);
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 900;
   white-space: nowrap;
 }
 
-.download-empty,
-.ranking-empty {
+.download-empty {
   margin: 8px 0 0;
   color: var(--muted);
   font-size: 11px;
   text-align: center;
 }
 
-.download-list::-webkit-scrollbar,
-.ranking-list::-webkit-scrollbar {
+.download-list::-webkit-scrollbar {
   width: 8px;
 }
 
-.download-list::-webkit-scrollbar-track,
-.ranking-list::-webkit-scrollbar-track {
+.download-list::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.04);
 }
 
-.download-list::-webkit-scrollbar-thumb,
-.ranking-list::-webkit-scrollbar-thumb {
+.download-list::-webkit-scrollbar-thumb {
   background: rgba(236, 210, 123, 0.38);
-}
-
-/* ========================================================= */
-/* RANKING GLOBAL */
-/* ========================================================= */
-
-.ranking-item {
-  display: grid;
-  grid-template-columns: 28px 1fr 38px;
-  gap: 8px;
-  align-items: center;
-  padding: 6px 4px;
-  color: rgba(255, 255, 255, 0.76);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
-}
-
-.ranking-item:first-child .ranking-position,
-.ranking-item:first-child .ranking-count {
-  color: var(--accent);
-}
-
-.ranking-position {
-  width: 22px;
-  height: 22px;
-  color: rgba(255, 255, 255, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 900;
-}
-
-.ranking-info {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.ranking-info strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 11px;
-  line-height: 1.2;
-}
-
-.ranking-info small {
-  margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: rgba(255, 255, 255, 0.42);
-  font-size: 10px;
-  line-height: 1.2;
-}
-
-.ranking-count {
-  justify-self: end;
-  color: var(--success);
-  font-size: 13px;
-  font-weight: 900;
-}
-
-.ranking-button {
-  width: 100%;
-  margin-top: 8px;
-  padding: 7px 8px;
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.58);
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.ranking-button:hover {
-  color: var(--accent);
-  border-color: rgba(236, 210, 123, 0.35);
-  background: rgba(236, 210, 123, 0.06);
 }
 
 @media (max-width: 480px) {
@@ -389,12 +345,15 @@ select {
   }
 
   .download-item {
-    grid-template-columns: 26px 1fr auto;
+    grid-template-columns: 24px 1fr auto;
     gap: 6px;
   }
 
-  .ranking-item {
-    grid-template-columns: 24px 1fr 32px;
-    gap: 6px;
+  #download-count {
+    font-size: 9px;
+  }
+
+  .download-panel-tools {
+    align-items: flex-start;
   }
 }
