@@ -175,16 +175,23 @@ async function loadPublicPlaylists() {
       action: "publicPlaylists",
     });
 
-    const dynamicPlaylists = Array.isArray(payload.playlists)
+    const publicPlaylists = Array.isArray(payload.playlists)
       ? payload.playlists
       : [];
 
-    dynamicPlaylists.forEach((playlist) => {
+    const nextPlaylists = {};
+
+    publicPlaylists.forEach((playlist) => {
       if (!playlist?.id) {
         return;
       }
 
-      availablePlaylists[playlist.id] = {
+      if (FIXED_PLAYLISTS[playlist.id]) {
+        nextPlaylists[playlist.id] = FIXED_PLAYLISTS[playlist.id];
+        return;
+      }
+
+      nextPlaylists[playlist.id] = {
         id: playlist.id,
         name: playlist.name || `Playlist ${playlist.repo || playlist.id}`,
         subtitle: playlist.subtitle || `Músicas carregadas do repositório GitHub ${playlist.owner}/${playlist.repo}`,
@@ -197,6 +204,10 @@ async function loadPublicPlaylists() {
         repoUrl: playlist.repoUrl || `https://github.com/${playlist.owner}/${playlist.repo}`,
       };
     });
+
+    if (Object.keys(nextPlaylists).length) {
+      availablePlaylists = nextPlaylists;
+    }
 
     setOfflineCacheStatus("Playlists públicas sincronizadas.", "success");
   } catch (error) {
