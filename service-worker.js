@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v3.0.0";
+const CACHE_VERSION = "v4.0.0";
 const CORE_CACHE = `winamp-core-${CACHE_VERSION}`;
 const MEDIA_CACHE = `winamp-media-${CACHE_VERSION}`;
 
@@ -115,13 +115,17 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
-  if (isGoogleScriptRequest(url) || isExternalRequest(url)) {
+  if (isGoogleScriptRequest(url)) {
     return;
   }
 
   if (isMediaRequest(url)) {
     event.waitUntil(prefetchCurrentAndNext(url.href));
     event.respondWith(mediaStrategy(request));
+    return;
+  }
+
+  if (isExternalRequest(url)) {
     return;
   }
 
@@ -294,7 +298,8 @@ async function cacheFullMedia(item, scope, itemIndex = 0, totalItems = 1) {
 
     const response = await fetch(normalizedUrl, {
       method: "GET",
-      cache: "reload"
+      cache: "reload",
+      mode: "cors",
     });
 
     if (!response || !response.ok) {
@@ -348,8 +353,8 @@ async function cacheFullMedia(item, scope, itemIndex = 0, totalItems = 1) {
     });
 
     const cachedResponse = new Response(blob, {
-      status: response.status,
-      statusText: response.statusText,
+      status: 200,
+      statusText: "OK",
       headers: {
         "Content-Type": response.headers.get("Content-Type") || "audio/mpeg",
         "Content-Length": String(blob.size),

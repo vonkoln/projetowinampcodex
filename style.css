@@ -76,6 +76,35 @@ select {
   font-weight: 600;
 }
 
+.header-actions {
+  min-width: 120px;
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+
+.playlist-selector-label {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.playlist-selector {
+  width: 130px;
+  height: 28px;
+  color: #10131d;
+  background: linear-gradient(180deg, #fff6b7 0%, #e1c75a 48%, #8a6a1b 100%);
+  border: 1px solid #2a2108;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.8),
+    0 4px 12px rgba(0, 0, 0, 0.32);
+  font-size: 10px;
+  font-weight: 800;
+  outline: none;
+}
+
 .project-badge {
   min-width: 78px;
   padding: 7px 9px;
@@ -156,10 +185,6 @@ select {
   color: var(--error);
 }
 
-/* ========================================================= */
-/* STATUS OFFLINE */
-/* ========================================================= */
-
 .offline-status-line {
   margin-top: 10px;
   padding-top: 8px;
@@ -188,10 +213,6 @@ select {
   color: rgba(255, 107, 107, 0.86);
 }
 
-/* ========================================================= */
-/* BOTÕES */
-/* ========================================================= */
-
 .ranking-button {
   padding: 6px 8px;
   cursor: pointer;
@@ -218,10 +239,6 @@ select {
   color: #10131d;
   filter: brightness(1.08);
 }
-
-/* ========================================================= */
-/* BARRAS DE PROGRESSO OFFLINE */
-/* ========================================================= */
 
 .progress-panel {
   margin-top: 10px;
@@ -324,10 +341,6 @@ select {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* ========================================================= */
-/* ESCOLHER OFFLINE */
-/* ========================================================= */
 
 .offline-picker-panel,
 .download-panel {
@@ -554,6 +567,7 @@ select {
 
   .project-header {
     padding: 12px;
+    align-items: flex-start;
   }
 
   .project-header h1 {
@@ -562,6 +576,15 @@ select {
 
   .project-header p {
     font-size: 11px;
+  }
+
+  .header-actions {
+    min-width: 108px;
+  }
+
+  .playlist-selector {
+    width: 108px;
+    font-size: 9px;
   }
 
   #webamp-container {

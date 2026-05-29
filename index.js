@@ -1,9 +1,8 @@
 /*
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
 */
-import audios from "./data/audios.js";
+import hippodromoAudios from "./data/audios.js";
 
-const AUDIO_BASE_PATH = "./files/";
 const SKIN_PATH = "./skin/base-2.91.wsz";
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
@@ -11,10 +10,37 @@ const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq
 
 const MAX_OFFLINE_SELECTION = 10;
 
+const PLAYLISTS = {
+  hippodromo: {
+    id: "hippodromo",
+    name: "Playlist Hippodromo",
+    subtitle: "Base 2.91 + músicas do projeto atual",
+    type: "local",
+    audioBasePath: "./files/",
+    audios: hippodromoAudios,
+  },
+
+  redhot: {
+    id: "redhot",
+    name: "Playlist Red Hot Chili Peppers",
+    subtitle: "Músicas carregadas do repositório GitHub vonkoln/redhot",
+    type: "github",
+    owner: "vonkoln",
+    repo: "redhot",
+    branch: "master",
+    dataFile: "data.js",
+    filesPath: "files",
+  },
+};
+
 const elements = {
   container: document.getElementById("webamp-container"),
   status: document.getElementById("player-status"),
   trackCount: document.getElementById("track-count"),
+
+  playlistTitle: document.getElementById("playlist-title"),
+  playlistSubtitle: document.getElementById("playlist-subtitle"),
+  playlistSelector: document.getElementById("playlist-selector"),
 
   connectionBanner: document.getElementById("connection-banner"),
   connectionStatusText: document.getElementById("connection-status-text"),
@@ -42,10 +68,15 @@ const elements = {
   refreshRanking: document.getElementById("refresh-ranking"),
 };
 
+let currentPlaylist = null;
+let currentAudios = [];
+let currentAudioBasePath = "./files/";
+
 let globalRanking = [];
 let rankingByTrackKey = new Map();
 let serviceWorkerRegistration = null;
 let selectedOfflineKeys = new Set();
+let webampInstance = null;
 
 function setStatus(message, type = "info") {
   elements.status.textContent = message;
@@ -77,23 +108,33 @@ function parseDurationToSeconds(duration) {
   return undefined;
 }
 
-function normalizeTrack(item, index) {
-  const title = item.title || `Faixa ${index + 1}`;
-  const artist = item.artist || "Artista desconhecido";
-  const file = item.file;
+function normalizeAudioItem(item, index) {
+  return {
+    id: item.id ?? index + 1,
+    title: item.title || `Faixa ${index + 1}`,
+    artist: item.artist || "Artista desconhecido",
+    cover: item.cover || "",
+    file: item.file || "",
+    category: item.category || currentPlaylist?.name || "Sem categoria",
+    duration: item.duration || "--:--",
+  };
+}
 
-  if (!file) {
+function normalizeTrack(item, index) {
+  const audio = normalizeAudioItem(item, index);
+
+  if (!audio.file) {
     console.warn("Faixa ignorada por não possuir arquivo:", item);
     return null;
   }
 
-  const duration = parseDurationToSeconds(item.duration);
+  const duration = parseDurationToSeconds(audio.duration);
 
   const track = {
-    url: `${AUDIO_BASE_PATH}${file}`,
+    url: getTrackUrl(audio),
     metaData: {
-      title,
-      artist,
+      title: audio.title,
+      artist: audio.artist,
     },
   };
 
@@ -103,23 +144,35 @@ function normalizeTrack(item, index) {
 }
 
 function getInitialTracks() {
-  return audios
+  return currentAudios
     .map(normalizeTrack)
     .filter(Boolean);
 }
 
 function getTrackKey(item, index) {
-  if (item.id !== undefined && item.id !== null) return `id-${item.id}`;
-  if (item.file) return `file-${item.file}`;
-  return `index-${index}`;
+  const playlistPrefix = currentPlaylist?.id || "playlist";
+
+  if (item.id !== undefined && item.id !== null) {
+    return `${playlistPrefix}:id-${item.id}`;
+  }
+
+  if (item.file) {
+    return `${playlistPrefix}:file-${item.file}`;
+  }
+
+  return `${playlistPrefix}:index-${index}`;
 }
 
 function getTrackUrl(item) {
-  return `${AUDIO_BASE_PATH}${item.file}`;
+  return `${currentAudioBasePath}${item.file}`;
 }
 
 function getAbsoluteUrl(url) {
   return new URL(url, window.location.href).href;
+}
+
+function getGithubCdnBaseUrl(playlist) {
+  return `https://cdn.jsdelivr.net/gh/${playlist.owner}/${playlist.repo}@${playlist.branch}/`;
 }
 
 function getSafeFileName(item, index) {
@@ -127,7 +180,7 @@ function getSafeFileName(item, index) {
   const title = item.title || `Faixa ${index + 1}`;
   const extension = item.file?.split(".").pop() || "mp3";
 
-  return `${String(index + 1).padStart(2, "0")} - ${artist} - ${title}.${extension}`
+  return `${currentPlaylist?.name || "Playlist"} - ${String(index + 1).padStart(2, "0")} - ${artist} - ${title}.${extension}`
     .replace(/[\\/:*?"<>|]/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -137,6 +190,122 @@ function getTrackLabel(item, index) {
   const artist = item.artist || "Artista desconhecido";
   const title = item.title || `Faixa ${index + 1}`;
   return `${artist} - ${title}`;
+}
+
+async function loadPlaylist(playlistId) {
+  const playlist = PLAYLISTS[playlistId] || PLAYLISTS.hippodromo;
+
+  setStatus(`Carregando ${playlist.name}...`);
+  setOfflineCacheStatus("Preparando cache da playlist...");
+
+  currentPlaylist = playlist;
+  selectedOfflineKeys.clear();
+
+  elements.playlistTitle.textContent = playlist.name;
+  elements.playlistSubtitle.textContent = playlist.subtitle;
+  document.title = playlist.name;
+
+  if (playlist.type === "local") {
+    currentAudioBasePath = playlist.audioBasePath;
+    currentAudios = playlist.audios.map(normalizeAudioItem);
+  }
+
+  if (playlist.type === "github") {
+    const data = await loadGithubPlaylistData(playlist);
+
+    currentAudioBasePath = `${getGithubCdnBaseUrl(playlist)}${playlist.filesPath}/`;
+    currentAudios = data.map(normalizeAudioItem);
+  }
+
+  await renderCurrentPlaylist();
+}
+
+async function loadGithubPlaylistData(playlist) {
+  const dataUrl = `${getGithubCdnBaseUrl(playlist)}${playlist.dataFile}`;
+
+  const response = await fetch(dataUrl, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Não foi possível carregar ${playlist.name}.`);
+  }
+
+  const source = await response.text();
+
+  return parseExportDefaultArray(source);
+}
+
+function parseExportDefaultArray(source) {
+  const cleanSource = source
+    .replace(/^\s*export\s+default\s+/, "")
+    .replace(/;\s*$/, "");
+
+  try {
+    const parsed = Function(`"use strict"; return (${cleanSource});`)();
+
+    if (!Array.isArray(parsed)) {
+      throw new Error("O arquivo data.js não retornou uma lista.");
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error(error);
+    throw new Error("Não foi possível interpretar o data.js da playlist.");
+  }
+}
+
+async function renderCurrentPlaylist() {
+  resetProgress("auto");
+  resetProgress("manual");
+
+  renderDownloadList();
+  renderOfflinePickerList();
+
+  sendMediaManifestToServiceWorker();
+
+  await fetchGlobalRanking();
+
+  await renderWebamp();
+}
+
+async function renderWebamp() {
+  validateEnvironment();
+
+  const tracks = getInitialTracks();
+
+  if (!tracks.length) {
+    setStatus("Nenhuma faixa encontrada nesta playlist.", "error");
+    updateTrackCount([]);
+    return;
+  }
+
+  updateTrackCount(tracks);
+
+  try {
+    if (webampInstance && typeof webampInstance.dispose === "function") {
+      webampInstance.dispose();
+    }
+  } catch (error) {
+    console.warn("Não foi possível descartar a instância anterior do Webamp:", error);
+  }
+
+  elements.container.innerHTML = "";
+
+  webampInstance = new window.Webamp({
+    initialTracks: tracks,
+
+    initialSkin: {
+      url: SKIN_PATH,
+    },
+  });
+
+  await webampInstance.renderWhenReady(elements.container);
+
+  window.__webamp = webampInstance;
+
+  setStatus(`${currentPlaylist.name} carregada.`, "success");
+  sendMediaManifestToServiceWorker();
 }
 
 function createJsonpRequest(params, timeoutMs = 8000) {
@@ -216,14 +385,14 @@ function getGlobalDownloadCount(item, index) {
 }
 
 function getTotalGlobalDownloads() {
-  return audios.reduce((total, item, index) => {
+  return currentAudios.reduce((total, item, index) => {
     if (!item.file) return total;
     return total + getGlobalDownloadCount(item, index);
   }, 0);
 }
 
 function getAudiosSortedByDownloads() {
-  return audios
+  return currentAudios
     .map((item, index) => ({
       item,
       index,
@@ -241,12 +410,14 @@ function getAudiosSortedByDownloads() {
 async function registerGlobalDownload(item, index) {
   const payload = await createJsonpRequest({
     action: "download",
+    playlistId: currentPlaylist.id,
+    playlistName: currentPlaylist.name,
     trackKey: getTrackKey(item, index),
     id: item.id || "",
     artist: item.artist || "Artista desconhecido",
     title: item.title || `Faixa ${index + 1}`,
     file: item.file || "",
-    category: item.category || "Sem categoria",
+    category: item.category || currentPlaylist.name || "Sem categoria",
   });
 
   updateRankingState(payload);
@@ -260,7 +431,11 @@ async function fetchGlobalRanking() {
   elements.downloadList.innerHTML = `<p class="download-empty">Atualizando lista por downloads globais...</p>`;
 
   try {
-    const payload = await createJsonpRequest({ action: "ranking" });
+    const payload = await createJsonpRequest({
+      action: "ranking",
+      playlistId: currentPlaylist?.id || "",
+    });
+
     updateRankingState(payload);
     renderDownloadList();
     renderOfflinePickerList();
@@ -299,7 +474,7 @@ function renderDownloadList() {
 
     const artist = item.artist || "Artista desconhecido";
     const title = item.title || `Faixa ${index + 1}`;
-    const category = item.category || "Sem categoria";
+    const category = item.category || currentPlaylist.name || "Sem categoria";
     const duration = item.duration || "--:--";
 
     link.href = getTrackUrl(item);
@@ -374,7 +549,7 @@ function renderOfflinePickerList() {
 
     const artist = item.artist || "Artista desconhecido";
     const title = item.title || `Faixa ${index + 1}`;
-    const category = item.category || "Sem categoria";
+    const category = item.category || currentPlaylist.name || "Sem categoria";
     const duration = item.duration || "--:--";
 
     row.innerHTML = `
@@ -449,7 +624,7 @@ function getTrackCacheItem(item, index) {
 }
 
 async function cacheSelectedOfflineTracks() {
-  const selectedEntries = audios
+  const selectedEntries = currentAudios
     .map((item, index) => ({
       item,
       index,
@@ -587,12 +762,15 @@ function sendMessageToServiceWorker(message, waitForFinal = true) {
 }
 
 function sendMediaManifestToServiceWorker() {
-  const items = audios
+  if (!currentAudios.length) return;
+
+  const items = currentAudios
     .filter((item) => item.file)
     .map((item, index) => getTrackCacheItem(item, index));
 
   const message = {
     type: "INIT_MEDIA_MANIFEST",
+    playlistId: currentPlaylist?.id || "",
     items,
     prefetchNextCount: 5,
   };
@@ -681,6 +859,15 @@ function bindActions() {
   elements.clearOfflineSelection.addEventListener("click", clearOfflineSelection);
   elements.cacheSelectedButton.addEventListener("click", cacheSelectedOfflineTracks);
 
+  elements.playlistSelector.addEventListener("change", async () => {
+    try {
+      await loadPlaylist(elements.playlistSelector.value);
+    } catch (error) {
+      console.error(error);
+      setStatus(`Erro ao carregar playlist: ${error.message}`, "error");
+    }
+  });
+
   window.addEventListener("online", updateConnectionStatus);
   window.addEventListener("offline", updateConnectionStatus);
 
@@ -692,7 +879,7 @@ function bindActions() {
   });
 }
 
-async function startWebamp() {
+async function startApp() {
   try {
     bindActions();
     updateConnectionStatus();
@@ -702,45 +889,15 @@ async function startWebamp() {
     resetProgress("auto");
     resetProgress("manual");
 
-    renderDownloadList();
-    renderOfflinePickerList();
-    fetchGlobalRanking();
-
-    validateEnvironment();
-
-    const tracks = getInitialTracks();
-
-    if (!tracks.length) {
-      setStatus("Nenhuma faixa encontrada em data/audios.js.", "error");
-      updateTrackCount([]);
-      return;
-    }
-
-    updateTrackCount(tracks);
-
-    const webamp = new window.Webamp({
-      initialTracks: tracks,
-
-      initialSkin: {
-        url: SKIN_PATH,
-      },
-    });
-
-    await webamp.renderWhenReady(elements.container);
-
-    setStatus("Webamp carregado com a skin Base 2.91.", "success");
-
-    window.__webamp = webamp;
-
-    sendMediaManifestToServiceWorker();
+    await loadPlaylist("hippodromo");
   } catch (error) {
     console.error(error);
 
     setStatus(
-      `Erro ao iniciar Webamp: ${error.message}`,
+      `Erro ao iniciar: ${error.message}`,
       "error"
     );
   }
 }
 
-startWebamp();
+startApp();

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Winamp Project Codex</title>
+  <title>Playlist Hippodromo</title>
 
   <link rel="icon" href="data:,">
   <link rel="manifest" href="./manifest.json">
@@ -21,12 +21,23 @@
 
     <section class="project-header">
       <div>
-        <h1>Winamp Project Codex</h1>
-        <p>Base 2.91 + músicas do projeto atual</p>
+        <h1 id="playlist-title">Playlist Hippodromo</h1>
+        <p id="playlist-subtitle">Base 2.91 + músicas do projeto atual</p>
       </div>
 
-      <div class="project-badge" id="track-count">
-        Carregando...
+      <div class="header-actions">
+        <label class="playlist-selector-label" for="playlist-selector">
+          Playlist
+        </label>
+
+        <select id="playlist-selector" class="playlist-selector">
+          <option value="hippodromo">Hippodromo</option>
+          <option value="redhot">Red Hot Chili Peppers</option>
+        </select>
+
+        <div class="project-badge" id="track-count">
+          Carregando...
+        </div>
       </div>
     </section>
 
