@@ -1,16 +1,22 @@
 /*
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
 */
+
 import hippodromoAudios from "./data/audios.js";
 
 const SKIN_PATH = "./skin/base-2.91.wsz";
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
 
-
 const MAX_OFFLINE_SELECTION = 10;
 
-const PLAYLISTS = {
+const STORAGE_KEYS = {
+  customPlaylists: "hippodromo-custom-playlists",
+  hiddenPlaylists: "hippodromo-hidden-playlists",
+  selectedPlaylist: "hippodromo-selected-playlist",
+};
+
+const FIXED_PLAYLISTS = {
   hippodromo: {
     id: "hippodromo",
     name: "Playlist Hippodromo",
@@ -30,6 +36,20 @@ const PLAYLISTS = {
     branch: "master",
     dataFile: "data.js",
     filesPath: "files",
+    repoUrl: "https://github.com/vonkoln/redhot",
+  },
+
+  raimundos: {
+    id: "raimundos",
+    name: "Playlist Raimundos",
+    subtitle: "Músicas carregadas do repositório GitHub vonkoln/raimundos",
+    type: "github",
+    owner: "vonkoln",
+    repo: "raimundos",
+    branch: "main",
+    dataFile: "data.js",
+    filesPath: "files",
+    repoUrl: "https://github.com/vonkoln/raimundos",
   },
 };
 
@@ -77,6 +97,7 @@ let rankingByTrackKey = new Map();
 let serviceWorkerRegistration = null;
 let selectedOfflineKeys = new Set();
 let webampInstance = null;
+let availablePlaylists = {};
 
 function setStatus(message, type = "info") {
   elements.status.textContent = message;
@@ -86,6 +107,72 @@ function setStatus(message, type = "info") {
 function setOfflineCacheStatus(message, type = "info") {
   elements.offlineCacheStatus.textContent = message;
   elements.offlineCacheStatus.dataset.type = type;
+}
+
+function getCustomPlaylists() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.customPlaylists);
+    const parsed = raw ? JSON.parse(raw) : [];
+
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function getHiddenPlaylistIds() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.hiddenPlaylists);
+    const parsed = raw ? JSON.parse(raw) : [];
+
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function getAvailablePlaylists() {
+  const hiddenIds = getHiddenPlaylistIds();
+  const customPlaylists = getCustomPlaylists();
+
+  const merged = {
+    ...FIXED_PLAYLISTS,
+  };
+
+  customPlaylists.forEach((playlist) => {
+    if (playlist?.id) {
+      merged[playlist.id] = playlist;
+    }
+  });
+
+  Object.keys(merged).forEach((playlistId) => {
+    if (hiddenIds.has(playlistId)) {
+      delete merged[playlistId];
+    }
+  });
+
+  if (!Object.keys(merged).length) {
+    return {
+      hippodromo: FIXED_PLAYLISTS.hippodromo,
+    };
+  }
+
+  return merged;
+}
+
+function populatePlaylistSelector() {
+  availablePlaylists = getAvailablePlaylists();
+
+  elements.playlistSelector.innerHTML = "";
+
+  Object.values(availablePlaylists).forEach((playlist) => {
+    const option = document.createElement("option");
+
+    option.value = playlist.id;
+    option.textContent = playlist.name.replace(/^Playlist\s+/i, "");
+
+    elements.playlistSelector.appendChild(option);
+  });
 }
 
 function parseDurationToSeconds(duration) {
@@ -193,7 +280,15 @@ function getTrackLabel(item, index) {
 }
 
 async function loadPlaylist(playlistId) {
-  const playlist = PLAYLISTS[playlistId] || PLAYLISTS.hippodromo;
+  populatePlaylistSelector();
+
+  const playlist = availablePlaylists[playlistId] ||
+    availablePlaylists.hippodromo ||
+    Object.values(availablePlaylists)[0];
+
+  if (!playlist) {
+    throw new Error("Nenhuma playlist disponível.");
+  }
 
   setStatus(`Carregando ${playlist.name}...`);
   setOfflineCacheStatus("Preparando cache da playlist...");
@@ -202,8 +297,11 @@ async function loadPlaylist(playlistId) {
   selectedOfflineKeys.clear();
 
   elements.playlistTitle.textContent = playlist.name;
-  elements.playlistSubtitle.textContent = playlist.subtitle;
+  elements.playlistSubtitle.textContent = playlist.subtitle || "";
+  elements.playlistSelector.value = playlist.id;
   document.title = playlist.name;
+
+  localStorage.setItem(STORAGE_KEYS.selectedPlaylist, playlist.id);
 
   if (playlist.type === "local") {
     currentAudioBasePath = playlist.audioBasePath;
@@ -213,7 +311,7 @@ async function loadPlaylist(playlistId) {
   if (playlist.type === "github") {
     const data = await loadGithubPlaylistData(playlist);
 
-    currentAudioBasePath = `${getGithubCdnBaseUrl(playlist)}${playlist.filesPath}/`;
+    currentAudioBasePath = `${getGithubCdnBaseUrl(playlist)}${playlist.filesPath || "files"}/`;
     currentAudios = data.map(normalizeAudioItem);
   }
 
@@ -221,14 +319,14 @@ async function loadPlaylist(playlistId) {
 }
 
 async function loadGithubPlaylistData(playlist) {
-  const dataUrl = `${getGithubCdnBaseUrl(playlist)}${playlist.dataFile}`;
+  const dataUrl = `${getGithubCdnBaseUrl(playlist)}${playlist.dataFile || "data.js"}`;
 
   const response = await fetch(dataUrl, {
     cache: "no-store",
   });
 
   if (!response.ok) {
-    throw new Error(`Não foi possível carregar ${playlist.name}.`);
+    throw new Error(`Não foi possível carregar ${playlist.name}. Verifique se existe data.js no repositório.`);
   }
 
   const source = await response.text();
@@ -868,6 +966,20 @@ function bindActions() {
     }
   });
 
+  window.addEventListener("storage", (event) => {
+    if (
+      event.key === STORAGE_KEYS.customPlaylists ||
+      event.key === STORAGE_KEYS.hiddenPlaylists
+    ) {
+      const currentId = currentPlaylist?.id || "hippodromo";
+      populatePlaylistSelector();
+
+      if (availablePlaylists[currentId]) {
+        elements.playlistSelector.value = currentId;
+      }
+    }
+  });
+
   window.addEventListener("online", updateConnectionStatus);
   window.addEventListener("offline", updateConnectionStatus);
 
@@ -889,7 +1001,12 @@ async function startApp() {
     resetProgress("auto");
     resetProgress("manual");
 
-    await loadPlaylist("hippodromo");
+    populatePlaylistSelector();
+
+    const savedPlaylistId = localStorage.getItem(STORAGE_KEYS.selectedPlaylist) || "hippodromo";
+    const startPlaylistId = availablePlaylists[savedPlaylistId] ? savedPlaylistId : "hippodromo";
+
+    await loadPlaylist(startPlaylistId);
   } catch (error) {
     console.error(error);
 
