@@ -1,15 +1,11 @@
 /*
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
 */
-
 import audios from "./data/audios.js";
 
 const AUDIO_BASE_PATH = "./files/";
 const SKIN_PATH = "./skin/base-2.91.wsz";
 
-/*
-  Cole aqui a URL do Apps Script publicado como App da Web.
-*/
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
 
 
@@ -35,6 +31,16 @@ const elements = {
 
   cacheCoreButton: document.getElementById("cache-core-button"),
   offlineCacheStatus: document.getElementById("offline-cache-status"),
+
+  autoProgressFill: document.getElementById("auto-progress-fill"),
+  autoItemProgress: document.getElementById("auto-item-progress"),
+  autoTotalProgress: document.getElementById("auto-total-progress"),
+  autoProgressName: document.getElementById("auto-progress-name"),
+
+  manualProgressFill: document.getElementById("manual-progress-fill"),
+  manualItemProgress: document.getElementById("manual-item-progress"),
+  manualTotalProgress: document.getElementById("manual-total-progress"),
+  manualProgressName: document.getElementById("manual-progress-name"),
 
   offlinePickerList: document.getElementById("offline-picker-list"),
   offlineSelectedCount: document.getElementById("offline-selected-count"),
@@ -63,15 +69,11 @@ function setOfflineCacheStatus(message, type = "info") {
 }
 
 function parseDurationToSeconds(duration) {
-  if (!duration || typeof duration !== "string") {
-    return undefined;
-  }
+  if (!duration || typeof duration !== "string") return undefined;
 
   const parts = duration.split(":").map((part) => Number(part.trim()));
 
-  if (parts.some((part) => Number.isNaN(part))) {
-    return undefined;
-  }
+  if (parts.some((part) => Number.isNaN(part))) return undefined;
 
   if (parts.length === 2) {
     const [minutes, seconds] = parts;
@@ -106,9 +108,7 @@ function normalizeTrack(item, index) {
     },
   };
 
-  if (duration) {
-    track.duration = duration;
-  }
+  if (duration) track.duration = duration;
 
   return track;
 }
@@ -120,14 +120,8 @@ function getInitialTracks() {
 }
 
 function getTrackKey(item, index) {
-  if (item.id !== undefined && item.id !== null) {
-    return `id-${item.id}`;
-  }
-
-  if (item.file) {
-    return `file-${item.file}`;
-  }
-
+  if (item.id !== undefined && item.id !== null) return `id-${item.id}`;
+  if (item.file) return `file-${item.file}`;
   return `index-${index}`;
 }
 
@@ -153,7 +147,6 @@ function getSafeFileName(item, index) {
 function getTrackLabel(item, index) {
   const artist = item.artist || "Artista desconhecido";
   const title = item.title || `Faixa ${index + 1}`;
-
   return `${artist} - ${title}`;
 }
 
@@ -187,10 +180,7 @@ function createJsonpRequest(params, timeoutMs = 8000) {
     };
 
     const timer = window.setTimeout(() => {
-      if (didFinish) {
-        return;
-      }
-
+      if (didFinish) return;
       cleanup();
       reject(new Error("Tempo esgotado ao acessar o Google Sheets."));
     }, timeoutMs);
@@ -233,16 +223,12 @@ function updateRankingState(payload) {
 function getGlobalDownloadCount(item, index) {
   const key = getTrackKey(item, index);
   const rankingItem = rankingByTrackKey.get(key);
-
   return Number(rankingItem?.count || 0);
 }
 
 function getTotalGlobalDownloads() {
   return audios.reduce((total, item, index) => {
-    if (!item.file) {
-      return total;
-    }
-
+    if (!item.file) return total;
     return total + getGlobalDownloadCount(item, index);
   }, 0);
 }
@@ -258,10 +244,7 @@ function getAudiosSortedByDownloads() {
     }))
     .filter((entry) => entry.item.file)
     .sort((a, b) => {
-      if (b.count !== a.count) {
-        return b.count - a.count;
-      }
-
+      if (b.count !== a.count) return b.count - a.count;
       return a.label.localeCompare(b.label, "pt-BR");
     });
 }
@@ -285,15 +268,10 @@ async function registerGlobalDownload(item, index) {
 }
 
 async function fetchGlobalRanking() {
-  elements.downloadList.innerHTML = `
-    <p class="download-empty">Atualizando lista por downloads globais...</p>
-  `;
+  elements.downloadList.innerHTML = `<p class="download-empty">Atualizando lista por downloads globais...</p>`;
 
   try {
-    const payload = await createJsonpRequest({
-      action: "ranking",
-    });
-
+    const payload = await createJsonpRequest({ action: "ranking" });
     updateRankingState(payload);
     renderDownloadList();
     renderOfflinePickerList();
@@ -320,9 +298,7 @@ function renderDownloadList() {
     `${totalFiles} arquivo${totalFiles === 1 ? "" : "s"} · ${totalDownloads} download${totalDownloads === 1 ? "" : "s"}`;
 
   if (!sortedAudios.length) {
-    elements.downloadList.innerHTML = `
-      <p class="download-empty">Nenhum arquivo disponível para download.</p>
-    `;
+    elements.downloadList.innerHTML = `<p class="download-empty">Nenhum arquivo disponível para download.</p>`;
     return;
   }
 
@@ -366,7 +342,7 @@ function renderDownloadList() {
       setStatus(`Registrando download: ${artist} - ${title}...`);
 
       try {
-        await cacheMediaFiles([getTrackUrl(item)]);
+        await cacheMediaFiles([getTrackCacheItem(item, index)], "manual");
       } catch (error) {
         console.warn("Não foi possível pré-cachear antes do download:", error);
       }
@@ -393,9 +369,7 @@ function renderOfflinePickerList() {
   const sortedAudios = getAudiosSortedByDownloads();
 
   if (!sortedAudios.length) {
-    elements.offlinePickerList.innerHTML = `
-      <p class="download-empty">Nenhuma música disponível para salvar offline.</p>
-    `;
+    elements.offlinePickerList.innerHTML = `<p class="download-empty">Nenhuma música disponível para salvar offline.</p>`;
     updateOfflineSelectedCount();
     return;
   }
@@ -430,7 +404,6 @@ function renderOfflinePickerList() {
     `;
 
     const checkbox = row.querySelector(".offline-checkbox");
-
     checkbox.checked = selectedOfflineKeys.has(key);
 
     checkbox.addEventListener("change", () => {
@@ -479,6 +452,13 @@ function clearOfflineSelection() {
   setOfflineCacheStatus("Seleção offline limpa.");
 }
 
+function getTrackCacheItem(item, index) {
+  return {
+    url: getAbsoluteUrl(getTrackUrl(item)),
+    name: getTrackLabel(item, index),
+  };
+}
+
 async function cacheSelectedOfflineTracks() {
   const selectedEntries = audios
     .map((item, index) => ({
@@ -494,13 +474,14 @@ async function cacheSelectedOfflineTracks() {
     return;
   }
 
-  const urls = selectedEntries.map((entry) => getTrackUrl(entry.item));
+  const items = selectedEntries.map((entry) => getTrackCacheItem(entry.item, entry.index));
 
-  setOfflineCacheStatus(`Salvando ${urls.length} música${urls.length === 1 ? "" : "s"} offline...`);
+  resetProgress("manual");
+  setOfflineCacheStatus(`Salvando ${items.length} música${items.length === 1 ? "" : "s"} offline...`);
 
   try {
-    await cacheMediaFiles(urls);
-    setOfflineCacheStatus(`${urls.length} música${urls.length === 1 ? "" : "s"} salva${urls.length === 1 ? "" : "s"} offline.`, "success");
+    await cacheMediaFiles(items, "manual");
+    setOfflineCacheStatus(`${items.length} música${items.length === 1 ? "" : "s"} salva${items.length === 1 ? "" : "s"} offline.`, "success");
   } catch (error) {
     console.error(error);
     setOfflineCacheStatus("Não foi possível salvar todas as músicas offline.", "error");
@@ -538,7 +519,6 @@ function validateEnvironment() {
 
 function updateTrackCount(tracks) {
   const total = tracks.length;
-
   elements.trackCount.textContent = `${total} faixa${total === 1 ? "" : "s"}`;
 }
 
@@ -565,7 +545,6 @@ async function registerServiceWorker() {
 
   try {
     serviceWorkerRegistration = await navigator.serviceWorker.register("./service-worker.js");
-
     await navigator.serviceWorker.ready;
 
     setOfflineCacheStatus("Cache ativo: música atual + próximas 5 serão salvas automaticamente.", "success");
@@ -591,7 +570,7 @@ function getServiceWorkerTarget() {
     null;
 }
 
-function sendMessageToServiceWorker(message) {
+function sendMessageToServiceWorker(message, waitForFinal = true) {
   return new Promise((resolve, reject) => {
     const target = getServiceWorkerTarget();
 
@@ -611,17 +590,21 @@ function sendMessageToServiceWorker(message) {
     };
 
     target.postMessage(message, [messageChannel.port2]);
+
+    if (!waitForFinal) {
+      resolve({ ok: true });
+    }
   });
 }
 
 function sendMediaManifestToServiceWorker() {
-  const urls = audios
+  const items = audios
     .filter((item) => item.file)
-    .map((item) => getAbsoluteUrl(getTrackUrl(item)));
+    .map((item, index) => getTrackCacheItem(item, index));
 
   const message = {
     type: "INIT_MEDIA_MANIFEST",
-    urls,
+    items,
     prefetchNextCount: 5,
   };
 
@@ -638,7 +621,11 @@ async function cacheCoreFiles() {
   try {
     await sendMessageToServiceWorker({
       type: "CACHE_URLS",
-      urls: APP_CORE_CACHE_FILES,
+      items: APP_CORE_CACHE_FILES.map((url) => ({
+        url: getAbsoluteUrl(url),
+        name: url,
+      })),
+      scope: "core",
     });
 
     setOfflineCacheStatus("Arquivos principais salvos offline.", "success");
@@ -648,17 +635,75 @@ async function cacheCoreFiles() {
   }
 }
 
-async function cacheMediaFiles(urls) {
-  if (!urls.length) {
-    return;
-  }
+async function cacheMediaFiles(items, scope) {
+  if (!items.length) return;
 
-  const absoluteUrls = urls.map((url) => getAbsoluteUrl(url));
+  const normalizedItems = items.map((item) => ({
+    url: getAbsoluteUrl(item.url),
+    name: item.name || item.url,
+  }));
 
   await sendMessageToServiceWorker({
     type: "CACHE_URLS",
-    urls: absoluteUrls,
+    items: normalizedItems,
+    scope,
   });
+}
+
+function resetProgress(scope) {
+  updateProgressBar({
+    scope,
+    itemName: scope === "manual"
+      ? "Aguardando músicas escolhidas..."
+      : "Aguardando música atual + próximas 5...",
+    itemPercent: 0,
+    totalPercent: 0,
+  });
+}
+
+function updateProgressBar(data) {
+  const itemPercent = Math.max(0, Math.min(100, Number(data.itemPercent || 0)));
+  const totalPercent = Math.max(0, Math.min(100, Number(data.totalPercent || 0)));
+  const itemName = data.itemName || "Aguardando...";
+
+  const isManual = data.scope === "manual";
+
+  const fill = isManual ? elements.manualProgressFill : elements.autoProgressFill;
+  const itemLabel = isManual ? elements.manualItemProgress : elements.autoItemProgress;
+  const totalLabel = isManual ? elements.manualTotalProgress : elements.autoTotalProgress;
+  const nameLabel = isManual ? elements.manualProgressName : elements.autoProgressName;
+
+  fill.style.width = `${itemPercent}%`;
+  itemLabel.textContent = `${Math.round(itemPercent)}%`;
+  totalLabel.textContent = `${Math.round(totalPercent)}%`;
+  nameLabel.textContent = itemName;
+
+  fill.classList.toggle("is-complete", itemPercent >= 100 && totalPercent >= 100);
+}
+
+function handleServiceWorkerMessage(event) {
+  const data = event.data || {};
+
+  if (data.type === "CACHE_PROGRESS") {
+    updateProgressBar(data);
+  }
+
+  if (data.type === "CACHE_DONE") {
+    updateProgressBar({
+      scope: data.scope,
+      itemName: data.message || "Download offline concluído.",
+      itemPercent: 100,
+      totalPercent: 100,
+    });
+
+    if (data.scope === "auto") {
+      setOfflineCacheStatus("Música atual + próximas faixas salvas no cache.", "success");
+    }
+
+    if (data.scope === "manual") {
+      setOfflineCacheStatus("Músicas escolhidas salvas para ouvir offline.", "success");
+    }
+  }
 }
 
 function bindActions() {
@@ -670,6 +715,8 @@ function bindActions() {
 
   window.addEventListener("online", updateConnectionStatus);
   window.addEventListener("offline", updateConnectionStatus);
+
+  navigator.serviceWorker?.addEventListener("message", handleServiceWorkerMessage);
 
   navigator.serviceWorker?.addEventListener("controllerchange", () => {
     setOfflineCacheStatus("Cache atualizado. Recarregue a página para finalizar.", "success");
@@ -683,6 +730,9 @@ async function startWebamp() {
     updateConnectionStatus();
 
     await registerServiceWorker();
+
+    resetProgress("auto");
+    resetProgress("manual");
 
     renderDownloadList();
     renderOfflinePickerList();

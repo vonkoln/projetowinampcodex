@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v2.0.0";
+const CACHE_VERSION = "v3.0.0";
 const CORE_CACHE = `winamp-core-${CACHE_VERSION}`;
 const MEDIA_CACHE = `winamp-media-${CACHE_VERSION}`;
 
@@ -14,6 +14,7 @@ const CORE_ASSETS = [
 
 let mediaManifest = [];
 let prefetchNextCount = 5;
+let autoPrefetchRunning = false;
 const prefetchingUrls = new Set();
 
 self.addEventListener("install", (event) => {
@@ -55,8 +56,8 @@ self.addEventListener("message", (event) => {
   }
 
   if (data.type === "INIT_MEDIA_MANIFEST") {
-    mediaManifest = Array.isArray(data.urls)
-      ? data.urls.map(normalizeUrl).filter(Boolean)
+    mediaManifest = Array.isArray(data.items)
+      ? data.items.map(normalizeCacheItem).filter(Boolean)
       : [];
 
     prefetchNextCount = Number(data.prefetchNextCount || 5);
@@ -72,15 +73,24 @@ self.addEventListener("message", (event) => {
   }
 
   if (data.type === "CACHE_URLS") {
-    const urls = Array.isArray(data.urls) ? data.urls : [];
+    const items = normalizeIncomingItems(data);
+    const scope = data.scope || "manual";
 
     event.waitUntil(
-      cacheUrls(urls)
+      cacheItemsSequentially(items, scope)
         .then(() => {
+          notifyClients({
+            type: "CACHE_DONE",
+            scope,
+            message: scope === "manual"
+              ? "Músicas escolhidas salvas offline."
+              : "Cache concluído."
+          });
+
           if (port) {
             port.postMessage({
               ok: true,
-              total: urls.length
+              total: items.length
             });
           }
         })
@@ -123,11 +133,48 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(cacheFirstStrategy(request));
 });
 
+function normalizeIncomingItems(data) {
+  if (Array.isArray(data.items)) {
+    return data.items.map(normalizeCacheItem).filter(Boolean);
+  }
+
+  if (Array.isArray(data.urls)) {
+    return data.urls
+      .map((url) => normalizeCacheItem({ url, name: url }))
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function normalizeCacheItem(item) {
+  try {
+    const url = new URL(item.url, self.location.href).href;
+
+    return {
+      url,
+      name: item.name || getNameFromUrl(url),
+    };
+  } catch {
+    return null;
+  }
+}
+
 function normalizeUrl(url) {
   try {
     return new URL(url, self.location.href).href;
   } catch {
     return "";
+  }
+}
+
+function getNameFromUrl(url) {
+  try {
+    const path = new URL(url).pathname;
+    const fileName = path.split("/").pop() || url;
+    return decodeURIComponent(fileName);
+  } catch {
+    return url;
   }
 }
 
@@ -154,17 +201,53 @@ function getCacheKey(url) {
   });
 }
 
-async function cacheUrls(urls) {
-  const normalizedUrls = urls
-    .map(normalizeUrl)
-    .filter(Boolean);
+async function notifyClients(message) {
+  const clientsList = await self.clients.matchAll({
+    includeUncontrolled: true,
+    type: "window"
+  });
 
-  for (const url of normalizedUrls) {
-    if (isMediaRequest(new URL(url))) {
-      await cacheFullMedia(url);
+  clientsList.forEach((client) => {
+    client.postMessage(message);
+  });
+}
+
+async function cacheItemsSequentially(items, scope) {
+  const validItems = items.filter(Boolean);
+  const totalItems = validItems.length;
+
+  if (!totalItems) {
+    return;
+  }
+
+  for (let index = 0; index < totalItems; index++) {
+    const item = validItems[index];
+
+    const beforeTotalPercent = (index / totalItems) * 100;
+
+    await notifyClients({
+      type: "CACHE_PROGRESS",
+      scope,
+      itemName: item.name,
+      itemPercent: 0,
+      totalPercent: beforeTotalPercent
+    });
+
+    if (isMediaRequest(new URL(item.url))) {
+      await cacheFullMedia(item, scope, index, totalItems);
     } else {
-      await cacheCoreFile(url);
+      await cacheCoreFile(item.url);
     }
+
+    const afterTotalPercent = ((index + 1) / totalItems) * 100;
+
+    await notifyClients({
+      type: "CACHE_PROGRESS",
+      scope,
+      itemName: item.name,
+      itemPercent: 100,
+      totalPercent: afterTotalPercent
+    });
   }
 }
 
@@ -183,8 +266,8 @@ async function cacheCoreFile(url) {
   await cache.put(request, response.clone());
 }
 
-async function cacheFullMedia(url) {
-  const normalizedUrl = normalizeUrl(url);
+async function cacheFullMedia(item, scope, itemIndex = 0, totalItems = 1) {
+  const normalizedUrl = normalizeUrl(item.url);
 
   if (!normalizedUrl || prefetchingUrls.has(normalizedUrl)) {
     return;
@@ -195,64 +278,144 @@ async function cacheFullMedia(url) {
   try {
     const cache = await caches.open(MEDIA_CACHE);
     const cacheKey = getCacheKey(normalizedUrl);
-
     const alreadyCached = await cache.match(cacheKey);
 
     if (alreadyCached) {
+      await notifyClients({
+        type: "CACHE_PROGRESS",
+        scope,
+        itemName: `${item.name} já estava salva`,
+        itemPercent: 100,
+        totalPercent: ((itemIndex + 1) / totalItems) * 100
+      });
+
       return;
     }
 
     const response = await fetch(normalizedUrl, {
       method: "GET",
-      cache: "reload",
-      headers: {
-        "Range": ""
-      }
+      cache: "reload"
     });
 
     if (!response || !response.ok) {
       throw new Error(`Falha ao salvar áudio no cache: ${normalizedUrl}`);
     }
 
-    await cache.put(cacheKey, response.clone());
+    const contentLength = Number(response.headers.get("Content-Length") || 0);
+
+    if (!response.body || !contentLength) {
+      await cache.put(cacheKey, response.clone());
+
+      await notifyClients({
+        type: "CACHE_PROGRESS",
+        scope,
+        itemName: item.name,
+        itemPercent: 100,
+        totalPercent: ((itemIndex + 1) / totalItems) * 100
+      });
+
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const chunks = [];
+    let receivedLength = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      chunks.push(value);
+      receivedLength += value.length;
+
+      const itemPercent = Math.min(100, (receivedLength / contentLength) * 100);
+      const totalPercent = ((itemIndex + (itemPercent / 100)) / totalItems) * 100;
+
+      await notifyClients({
+        type: "CACHE_PROGRESS",
+        scope,
+        itemName: item.name,
+        itemPercent,
+        totalPercent
+      });
+    }
+
+    const blob = new Blob(chunks, {
+      type: response.headers.get("Content-Type") || "audio/mpeg"
+    });
+
+    const cachedResponse = new Response(blob, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        "Content-Type": response.headers.get("Content-Type") || "audio/mpeg",
+        "Content-Length": String(blob.size),
+        "Accept-Ranges": "bytes"
+      }
+    });
+
+    await cache.put(cacheKey, cachedResponse);
   } finally {
     prefetchingUrls.delete(normalizedUrl);
   }
 }
 
 async function prefetchCurrentAndNext(currentUrl) {
+  if (autoPrefetchRunning) {
+    return;
+  }
+
   const normalizedCurrentUrl = normalizeUrl(currentUrl);
 
   if (!normalizedCurrentUrl) {
     return;
   }
 
-  const urlsToCache = [normalizedCurrentUrl];
+  const currentIndex = mediaManifest.findIndex((item) => item.url === normalizedCurrentUrl);
 
-  const currentIndex = mediaManifest.findIndex((url) => url === normalizedCurrentUrl);
-
-  if (currentIndex !== -1) {
-    for (let offset = 1; offset <= prefetchNextCount; offset++) {
-      const nextIndex = currentIndex + offset;
-
-      if (nextIndex >= mediaManifest.length) {
-        break;
-      }
-
-      urlsToCache.push(mediaManifest[nextIndex]);
-    }
+  if (currentIndex === -1) {
+    return;
   }
 
-  await Promise.allSettled(
-    urlsToCache.map((url) => cacheFullMedia(url))
-  );
+  const itemsToCache = [];
+
+  for (let offset = 0; offset <= prefetchNextCount; offset++) {
+    const nextIndex = currentIndex + offset;
+
+    if (nextIndex >= mediaManifest.length) {
+      break;
+    }
+
+    itemsToCache.push(mediaManifest[nextIndex]);
+  }
+
+  if (!itemsToCache.length) {
+    return;
+  }
+
+  autoPrefetchRunning = true;
+
+  try {
+    await cacheItemsSequentially(itemsToCache, "auto");
+
+    await notifyClients({
+      type: "CACHE_DONE",
+      scope: "auto",
+      message: "Música atual + próximas 5 salvas."
+    });
+  } finally {
+    autoPrefetchRunning = false;
+  }
 }
 
 async function navigationStrategy(request) {
   try {
     const networkResponse = await fetch(request);
-
     const cache = await caches.open(CORE_CACHE);
+
     cache.put("./index.html", networkResponse.clone());
 
     return networkResponse;

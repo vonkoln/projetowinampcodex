@@ -91,10 +91,6 @@ select {
   white-space: nowrap;
 }
 
-/* ========================================================= */
-/* STATUS DE CONEXÃO */
-/* ========================================================= */
-
 .connection-banner {
   width: 100%;
   max-width: 420px;
@@ -160,10 +156,6 @@ select {
   color: var(--error);
 }
 
-/* ========================================================= */
-/* FERRAMENTAS OFFLINE */
-/* ========================================================= */
-
 .offline-tools {
   margin-top: 10px;
   padding-top: 8px;
@@ -175,7 +167,8 @@ select {
   text-align: left;
 }
 
-.offline-button {
+.offline-button,
+.ranking-button {
   padding: 6px 8px;
   cursor: pointer;
   color: rgba(255, 255, 255, 0.68);
@@ -185,10 +178,22 @@ select {
   font-weight: 800;
 }
 
-.offline-button:hover {
+.offline-button:hover,
+.ranking-button:hover {
   color: var(--accent);
   border-color: rgba(236, 210, 123, 0.35);
   background: rgba(236, 210, 123, 0.06);
+}
+
+.ranking-button.primary {
+  color: #10131d;
+  background: linear-gradient(180deg, #fff6b7 0%, #e1c75a 48%, #8a6a1b 100%);
+  border-color: #2a2108;
+}
+
+.ranking-button.primary:hover {
+  color: #10131d;
+  filter: brightness(1.08);
 }
 
 .offline-cache-status {
@@ -211,17 +216,125 @@ select {
 }
 
 /* ========================================================= */
+/* BARRAS DE PROGRESSO OFFLINE */
+/* ========================================================= */
+
+.progress-panel {
+  margin-top: 10px;
+  padding-top: 8px;
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.progress-block {
+  display: grid;
+  gap: 5px;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.progress-header strong {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.progress-header span {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 900;
+  min-width: 42px;
+  text-align: right;
+}
+
+.progress-bar {
+  position: relative;
+  height: 18px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.22)),
+    rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.06),
+    inset -1px -1px 0 rgba(0,0,0,0.35);
+}
+
+.progress-fill {
+  position: relative;
+  width: 0%;
+  height: 100%;
+  min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(255,255,255,0.15) 0,
+      rgba(255,255,255,0.15) 4px,
+      transparent 4px,
+      transparent 8px
+    ),
+    linear-gradient(180deg, #67ff5c 0%, #1aa333 100%);
+  transition: width 0.18s ease;
+}
+
+.progress-fill.manual {
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(255,255,255,0.15) 0,
+      rgba(255,255,255,0.15) 4px,
+      transparent 4px,
+      transparent 8px
+    ),
+    linear-gradient(180deg, #fff6b7 0%, #c79524 100%);
+}
+
+.progress-fill.is-complete {
+  filter: brightness(1.18);
+}
+
+.progress-fill span {
+  color: #061108;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 1px 1px 0 rgba(255,255,255,0.25);
+}
+
+.progress-track-name {
+  min-height: 14px;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ========================================================= */
 /* ESCOLHER OFFLINE */
 /* ========================================================= */
 
-.offline-picker-panel {
+.offline-picker-panel,
+.download-panel {
   margin-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 8px;
   text-align: left;
 }
 
-.offline-picker-panel summary {
+.offline-picker-panel summary,
+.download-panel summary {
   cursor: pointer;
   color: rgba(255, 255, 255, 0.68);
   font-size: 11px;
@@ -234,22 +347,26 @@ select {
   user-select: none;
 }
 
-.offline-picker-panel summary::-webkit-details-marker {
+.offline-picker-panel summary::-webkit-details-marker,
+.download-panel summary::-webkit-details-marker {
   display: none;
 }
 
-.offline-picker-panel summary::before {
+.offline-picker-panel summary::before,
+.download-panel summary::before {
   content: "▸";
   color: var(--accent);
   margin-right: 4px;
   font-size: 10px;
 }
 
-.offline-picker-panel[open] summary::before {
+.offline-picker-panel[open] summary::before,
+.download-panel[open] summary::before {
   content: "▾";
 }
 
-#offline-selected-count {
+#offline-selected-count,
+#download-count {
   color: rgba(255, 255, 255, 0.48);
   font-size: 10px;
   font-weight: 700;
@@ -263,7 +380,8 @@ select {
   gap: 6px;
 }
 
-.offline-picker-list {
+.offline-picker-list,
+.download-list {
   margin-top: 8px;
   max-height: 230px;
   overflow-y: auto;
@@ -291,25 +409,28 @@ select {
   accent-color: #ecd27b;
 }
 
-.offline-rank {
-  width: 20px;
-  height: 20px;
+.offline-rank,
+.download-rank {
+  width: 22px;
+  height: 22px;
   color: rgba(255, 255, 255, 0.42);
   border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
 }
 
-.offline-info {
+.offline-info,
+.download-info {
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.offline-info strong {
+.offline-info strong,
+.download-info strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -317,7 +438,8 @@ select {
   line-height: 1.2;
 }
 
-.offline-info small {
+.offline-info small,
+.download-info small {
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -327,7 +449,8 @@ select {
   line-height: 1.2;
 }
 
-.offline-meta {
+.offline-meta,
+.download-meta {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -337,68 +460,11 @@ select {
   font-weight: 700;
 }
 
-.offline-meta small {
+.offline-meta small,
+.download-counter {
   color: var(--success);
   font-size: 9px;
   font-weight: 900;
-  white-space: nowrap;
-}
-
-.offline-picker-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.offline-picker-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.offline-picker-list::-webkit-scrollbar-thumb {
-  background: rgba(236, 210, 123, 0.38);
-}
-
-/* ========================================================= */
-/* ABA ÚNICA: DOWNLOADS + RANKING */
-/* ========================================================= */
-
-.download-panel {
-  margin-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 8px;
-  text-align: left;
-}
-
-.download-panel summary {
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 11px;
-  font-weight: 700;
-  list-style: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  user-select: none;
-}
-
-.download-panel summary::-webkit-details-marker {
-  display: none;
-}
-
-.download-panel summary::before {
-  content: "▸";
-  color: var(--accent);
-  margin-right: 4px;
-  font-size: 10px;
-}
-
-.download-panel[open] summary::before {
-  content: "▾";
-}
-
-#download-count {
-  color: rgba(255, 255, 255, 0.48);
-  font-size: 10px;
-  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -416,40 +482,6 @@ select {
   color: rgba(255, 255, 255, 0.42);
   font-size: 10px;
   font-weight: 700;
-}
-
-.ranking-button {
-  padding: 5px 8px;
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.58);
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.ranking-button.primary {
-  color: #10131d;
-  background: linear-gradient(180deg, #fff6b7 0%, #e1c75a 48%, #8a6a1b 100%);
-  border-color: #2a2108;
-}
-
-.ranking-button:hover {
-  color: var(--accent);
-  border-color: rgba(236, 210, 123, 0.35);
-  background: rgba(236, 210, 123, 0.06);
-}
-
-.ranking-button.primary:hover {
-  color: #10131d;
-  filter: brightness(1.08);
-}
-
-.download-list {
-  margin-top: 8px;
-  max-height: 230px;
-  overflow-y: auto;
-  padding-right: 4px;
 }
 
 .download-item {
@@ -477,60 +509,10 @@ select {
   color: var(--accent);
 }
 
-.download-rank {
-  width: 22px;
-  height: 22px;
-  color: rgba(255, 255, 255, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 900;
-}
-
-.download-info {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.download-info strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 11px;
-  line-height: 1.2;
-}
-
-.download-info small {
-  margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: rgba(255, 255, 255, 0.42);
-  font-size: 10px;
-  line-height: 1.2;
-}
-
-.download-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-}
-
 .download-duration {
   color: rgba(255, 255, 255, 0.45);
   font-size: 10px;
   font-weight: 700;
-}
-
-.download-counter {
-  color: var(--success);
-  font-size: 9px;
-  font-weight: 900;
-  white-space: nowrap;
 }
 
 .download-empty {
@@ -540,15 +522,18 @@ select {
   text-align: center;
 }
 
-.download-list::-webkit-scrollbar {
+.download-list::-webkit-scrollbar,
+.offline-picker-list::-webkit-scrollbar {
   width: 8px;
 }
 
-.download-list::-webkit-scrollbar-track {
+.download-list::-webkit-scrollbar-track,
+.offline-picker-list::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.04);
 }
 
-.download-list::-webkit-scrollbar-thumb {
+.download-list::-webkit-scrollbar-thumb,
+.offline-picker-list::-webkit-scrollbar-thumb {
   background: rgba(236, 210, 123, 0.38);
 }
 
@@ -557,8 +542,13 @@ select {
     padding: 14px 8px;
   }
 
-  .project-header {
+  .project-header,
+  .connection-banner,
+  .project-footer {
     max-width: 320px;
+  }
+
+  .project-header {
     padding: 12px;
   }
 
@@ -570,17 +560,9 @@ select {
     font-size: 11px;
   }
 
-  .connection-banner {
-    max-width: 320px;
-  }
-
   #webamp-container {
     width: 300px;
     min-height: 560px;
-  }
-
-  .project-footer {
-    max-width: 320px;
   }
 
   .offline-tools {
@@ -601,7 +583,8 @@ select {
     gap: 6px;
   }
 
-  #download-count {
+  #download-count,
+  #offline-selected-count {
     font-size: 9px;
   }
 
