@@ -1,3 +1,5 @@
+
+
 import audios from "./data/audios.js";
 
 const AUDIO_BASE_PATH = "./files/";
@@ -8,15 +10,28 @@ const SKIN_PATH = "./skin/base-2.91.wsz";
   Exemplo:
   const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/SEU_ID/exec";
 */
-
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
 
-
+const APP_CORE_CACHE_FILES = [
+  "./",
+  "./index.html",
+  "./index.js",
+  "./style.css",
+  "./manifest.json",
+  "./data/audios.js",
+  "./skin/base-2.91.wsz",
+];
 
 const elements = {
   container: document.getElementById("webamp-container"),
   status: document.getElementById("player-status"),
   trackCount: document.getElementById("track-count"),
+
+  connectionBanner: document.getElementById("connection-banner"),
+  connectionStatusText: document.getElementById("connection-status-text"),
+
+  cacheCoreButton: document.getElementById("cache-core-button"),
+  offlineCacheStatus: document.getElementById("offline-cache-status"),
 
   downloadList: document.getElementById("download-list"),
   downloadCount: document.getElementById("download-count"),
@@ -25,10 +40,16 @@ const elements = {
 
 let globalRanking = [];
 let rankingByTrackKey = new Map();
+let serviceWorkerRegistration = null;
 
 function setStatus(message, type = "info") {
   elements.status.textContent = message;
   elements.status.dataset.type = type;
+}
+
+function setOfflineCacheStatus(message, type = "info") {
+  elements.offlineCacheStatus.textContent = message;
+  elements.offlineCacheStatus.dataset.type = type;
 }
 
 function parseDurationToSeconds(duration) {
@@ -327,6 +348,14 @@ function renderDownloadList() {
 
       setStatus(`Registrando download: ${artist} - ${title}...`);
 
+      const audioUrl = `${AUDIO_BASE_PATH}${item.file}`;
+
+      try {
+        await cacheMediaFile(audioUrl);
+      } catch (error) {
+        console.warn("Não foi possível pré-cachear antes do download:", error);
+      }
+
       try {
         await registerGlobalDownload(item, index);
         setStatus(`Download registrado: ${artist} - ${title}.`, "success");
@@ -380,13 +409,116 @@ function updateTrackCount(tracks) {
   elements.trackCount.textContent = `${total} faixa${total === 1 ? "" : "s"}`;
 }
 
+function updateConnectionStatus() {
+  const isOnline = navigator.onLine;
+
+  elements.connectionBanner.classList.toggle("is-online", isOnline);
+  elements.connectionBanner.classList.toggle("is-offline", !isOnline);
+
+  if (isOnline) {
+    elements.connectionStatusText.textContent = "Online";
+    setOfflineCacheStatus("Conexão restaurada. Músicas acessadas podem continuar do cache.", "success");
+  } else {
+    elements.connectionStatusText.textContent = "Sem conexão";
+    setOfflineCacheStatus("Sem internet. O que já estiver em cache ainda pode funcionar.", "warning");
+  }
+}
+
+async function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    setOfflineCacheStatus("Service Worker não é suportado neste navegador.", "error");
+    return;
+  }
+
+  try {
+    serviceWorkerRegistration = await navigator.serviceWorker.register("./service-worker.js");
+
+    setOfflineCacheStatus("Cache ativo. Músicas acessadas serão reaproveitadas.", "success");
+
+    if (serviceWorkerRegistration.waiting) {
+      serviceWorkerRegistration.waiting.postMessage({
+        type: "SKIP_WAITING",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    setOfflineCacheStatus("Não foi possível ativar o cache offline.", "error");
+  }
+}
+
+function sendMessageToServiceWorker(message) {
+  return new Promise((resolve, reject) => {
+    if (!navigator.serviceWorker?.controller) {
+      reject(new Error("Service Worker ainda não está controlando a página."));
+      return;
+    }
+
+    const messageChannel = new MessageChannel();
+
+    messageChannel.port1.onmessage = (event) => {
+      if (event.data?.ok) {
+        resolve(event.data);
+      } else {
+        reject(new Error(event.data?.error || "Falha na comunicação com o Service Worker."));
+      }
+    };
+
+    navigator.serviceWorker.controller.postMessage(message, [messageChannel.port2]);
+  });
+}
+
+async function cacheCoreFiles() {
+  setOfflineCacheStatus("Salvando arquivos principais offline...");
+
+  try {
+    await sendMessageToServiceWorker({
+      type: "CACHE_URLS",
+      urls: APP_CORE_CACHE_FILES,
+    });
+
+    setOfflineCacheStatus("Arquivos principais salvos offline.", "success");
+  } catch (error) {
+    console.error(error);
+
+    if (!navigator.serviceWorker?.controller) {
+      setOfflineCacheStatus("Atualize a página uma vez para ativar o cache offline.", "warning");
+      return;
+    }
+
+    setOfflineCacheStatus("Não foi possível salvar os arquivos principais.", "error");
+  }
+}
+
+async function cacheMediaFile(url) {
+  if (!navigator.serviceWorker?.controller) {
+    return;
+  }
+
+  await sendMessageToServiceWorker({
+    type: "CACHE_URLS",
+    urls: [url],
+  });
+}
+
 function bindActions() {
   elements.refreshRanking.addEventListener("click", fetchGlobalRanking);
+  elements.cacheCoreButton.addEventListener("click", cacheCoreFiles);
+
+  window.addEventListener("online", updateConnectionStatus);
+  window.addEventListener("offline", updateConnectionStatus);
+
+  navigator.serviceWorker?.addEventListener("controllerchange", () => {
+    setOfflineCacheStatus("Cache atualizado. Recarregue se notar instabilidade.", "success");
+  });
 }
 
 async function startWebamp() {
   try {
     bindActions();
+    updateConnectionStatus();
+
+    await registerServiceWorker();
+
     renderDownloadList();
     fetchGlobalRanking();
 

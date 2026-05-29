@@ -6,6 +6,7 @@
   --muted: rgba(255, 255, 255, 0.68);
   --accent: #ecd27b;
   --success: #41ff31;
+  --warning: #ffd166;
   --error: #ff6b6b;
 }
 
@@ -46,7 +47,7 @@ select {
 .project-header {
   width: 100%;
   max-width: 420px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   padding: 14px 16px;
   display: flex;
   justify-content: space-between;
@@ -90,6 +91,33 @@ select {
   white-space: nowrap;
 }
 
+/* ========================================================= */
+/* STATUS DE CONEXÃO */
+/* ========================================================= */
+
+.connection-banner {
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 16px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.connection-banner.is-online {
+  color: var(--success);
+  border-color: rgba(65, 255, 49, 0.18);
+}
+
+.connection-banner.is-offline {
+  color: var(--warning);
+  border-color: rgba(255, 209, 102, 0.28);
+  background: rgba(255, 209, 102, 0.06);
+}
+
 .webamp-stage {
   width: 100%;
   display: flex;
@@ -130,6 +158,56 @@ select {
 
 #player-status[data-type="error"] {
   color: var(--error);
+}
+
+/* ========================================================= */
+/* FERRAMENTAS OFFLINE */
+/* ========================================================= */
+
+.offline-tools {
+  margin-top: 10px;
+  padding-top: 8px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.offline-button {
+  padding: 6px 8px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.offline-button:hover {
+  color: var(--accent);
+  border-color: rgba(236, 210, 123, 0.35);
+  background: rgba(236, 210, 123, 0.06);
+}
+
+.offline-cache-status {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.offline-cache-status[data-type="success"] {
+  color: rgba(65, 255, 49, 0.78);
+}
+
+.offline-cache-status[data-type="warning"] {
+  color: rgba(255, 209, 102, 0.82);
+}
+
+.offline-cache-status[data-type="error"] {
+  color: rgba(255, 107, 107, 0.86);
 }
 
 /* ========================================================= */
@@ -335,6 +413,10 @@ select {
     font-size: 11px;
   }
 
+  .connection-banner {
+    max-width: 320px;
+  }
+
   #webamp-container {
     width: 300px;
     min-height: 560px;
@@ -342,6 +424,10 @@ select {
 
   .project-footer {
     max-width: 320px;
+  }
+
+  .offline-tools {
+    grid-template-columns: 1fr;
   }
 
   .download-item {

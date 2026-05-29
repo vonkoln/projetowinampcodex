@@ -1,0 +1,23 @@
+{
+  "name": "Winamp Project Codex",
+  "short_name": "Winamp Codex",
+  "description": "Player estilo Winamp com playlist do projeto atual.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c1123",
+  "theme_color": "#0c1123",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%230c1123'/%3E%3Ctext x='96' y='108' text-anchor='middle' font-size='58' font-family='Arial' fill='%23ecd27b'%3EW%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230c1123'/%3E%3Ctext x='256' y='292' text-anchor='middle' font-size='160' font-family='Arial' fill='%23ecd27b'%3EW%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -7,6 +7,12 @@
   <title>Winamp Project Codex</title>
 
   <link rel="icon" href="data:,">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0c1123">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
   <link rel="stylesheet" href="./style.css" />
 </head>
 
@@ -24,6 +30,10 @@
       </div>
     </section>
 
+    <section class="connection-banner is-online" id="connection-banner">
+      <span id="connection-status-text">Online</span>
+    </section>
+
     <section class="webamp-stage">
       <div id="webamp-container"></div>
     </section>
@@ -32,6 +42,16 @@
       <p id="player-status">
         Inicializando Webamp...
       </p>
+
+      <div class="offline-tools">
+        <button type="button" id="cache-core-button" class="offline-button">
+          Salvar básico offline
+        </button>
+
+        <span id="offline-cache-status" class="offline-cache-status">
+          Cache preparado para músicas acessadas.
+        </span>
+      </div>
 
       <details class="download-panel">
         <summary>
