@@ -53,6 +53,31 @@
         </span>
       </div>
 
+      <details class="offline-picker-panel">
+        <summary>
+          Escolher músicas offline
+          <span id="offline-selected-count">0/10 selecionadas</span>
+        </summary>
+
+        <div class="offline-picker-tools">
+          <button type="button" id="select-top-offline" class="ranking-button">
+            Marcar top 10
+          </button>
+
+          <button type="button" id="clear-offline-selection" class="ranking-button">
+            Limpar
+          </button>
+
+          <button type="button" id="cache-selected-button" class="ranking-button primary">
+            Salvar selecionadas
+          </button>
+        </div>
+
+        <div class="offline-picker-list" id="offline-picker-list">
+          Carregando músicas...
+        </div>
+      </details>
+
       <details class="download-panel">
         <summary>
           Baixar músicas

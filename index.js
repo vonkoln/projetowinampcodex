@@ -1,4 +1,6 @@
-
+/*
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
+*/
 
 import audios from "./data/audios.js";
 
@@ -7,10 +9,9 @@ const SKIN_PATH = "./skin/base-2.91.wsz";
 
 /*
   Cole aqui a URL do Apps Script publicado como App da Web.
-  Exemplo:
-  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/SEU_ID/exec";
 */
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
+
 
 const APP_CORE_CACHE_FILES = [
   "./",
@@ -21,6 +22,8 @@ const APP_CORE_CACHE_FILES = [
   "./data/audios.js",
   "./skin/base-2.91.wsz",
 ];
+
+const MAX_OFFLINE_SELECTION = 10;
 
 const elements = {
   container: document.getElementById("webamp-container"),
@@ -33,6 +36,12 @@ const elements = {
   cacheCoreButton: document.getElementById("cache-core-button"),
   offlineCacheStatus: document.getElementById("offline-cache-status"),
 
+  offlinePickerList: document.getElementById("offline-picker-list"),
+  offlineSelectedCount: document.getElementById("offline-selected-count"),
+  selectTopOffline: document.getElementById("select-top-offline"),
+  clearOfflineSelection: document.getElementById("clear-offline-selection"),
+  cacheSelectedButton: document.getElementById("cache-selected-button"),
+
   downloadList: document.getElementById("download-list"),
   downloadCount: document.getElementById("download-count"),
   refreshRanking: document.getElementById("refresh-ranking"),
@@ -41,6 +50,7 @@ const elements = {
 let globalRanking = [];
 let rankingByTrackKey = new Map();
 let serviceWorkerRegistration = null;
+let selectedOfflineKeys = new Set();
 
 function setStatus(message, type = "info") {
   elements.status.textContent = message;
@@ -121,6 +131,14 @@ function getTrackKey(item, index) {
   return `index-${index}`;
 }
 
+function getTrackUrl(item) {
+  return `${AUDIO_BASE_PATH}${item.file}`;
+}
+
+function getAbsoluteUrl(url) {
+  return new URL(url, window.location.href).href;
+}
+
 function getSafeFileName(item, index) {
   const artist = item.artist || "Artista";
   const title = item.title || `Faixa ${index + 1}`;
@@ -147,7 +165,6 @@ function createJsonpRequest(params, timeoutMs = 8000) {
     }
 
     const callbackName = `__downloadCounterCallback_${Date.now()}_${Math.round(Math.random() * 100000)}`;
-
     const url = new URL(GOOGLE_SCRIPT_URL);
 
     Object.entries(params).forEach(([key, value]) => {
@@ -158,7 +175,6 @@ function createJsonpRequest(params, timeoutMs = 8000) {
     url.searchParams.set("_", Date.now());
 
     const script = document.createElement("script");
-
     let didFinish = false;
 
     const cleanup = () => {
@@ -204,7 +220,6 @@ function createJsonpRequest(params, timeoutMs = 8000) {
 
 function updateRankingState(payload) {
   globalRanking = Array.isArray(payload?.ranking) ? payload.ranking : [];
-
   rankingByTrackKey = new Map();
 
   globalRanking.forEach((item) => {
@@ -264,6 +279,7 @@ async function registerGlobalDownload(item, index) {
 
   updateRankingState(payload);
   renderDownloadList();
+  renderOfflinePickerList();
 
   return payload;
 }
@@ -280,6 +296,7 @@ async function fetchGlobalRanking() {
 
     updateRankingState(payload);
     renderDownloadList();
+    renderOfflinePickerList();
   } catch (error) {
     console.error(error);
 
@@ -290,6 +307,7 @@ async function fetchGlobalRanking() {
     `;
 
     renderDownloadList();
+    renderOfflinePickerList();
   }
 }
 
@@ -312,7 +330,6 @@ function renderDownloadList() {
 
   sortedAudios.forEach((entry, rankIndex) => {
     const { item, index, count } = entry;
-
     const link = document.createElement("a");
 
     const artist = item.artist || "Artista desconhecido";
@@ -320,7 +337,7 @@ function renderDownloadList() {
     const category = item.category || "Sem categoria";
     const duration = item.duration || "--:--";
 
-    link.href = `${AUDIO_BASE_PATH}${item.file}`;
+    link.href = getTrackUrl(item);
     link.download = getSafeFileName(item, index);
     link.className = "download-item";
     link.dataset.trackKey = getTrackKey(item, index);
@@ -348,10 +365,8 @@ function renderDownloadList() {
 
       setStatus(`Registrando download: ${artist} - ${title}...`);
 
-      const audioUrl = `${AUDIO_BASE_PATH}${item.file}`;
-
       try {
-        await cacheMediaFile(audioUrl);
+        await cacheMediaFiles([getTrackUrl(item)]);
       } catch (error) {
         console.warn("Não foi possível pré-cachear antes do download:", error);
       }
@@ -372,6 +387,124 @@ function renderDownloadList() {
 
   elements.downloadList.innerHTML = "";
   elements.downloadList.appendChild(fragment);
+}
+
+function renderOfflinePickerList() {
+  const sortedAudios = getAudiosSortedByDownloads();
+
+  if (!sortedAudios.length) {
+    elements.offlinePickerList.innerHTML = `
+      <p class="download-empty">Nenhuma música disponível para salvar offline.</p>
+    `;
+    updateOfflineSelectedCount();
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  sortedAudios.forEach((entry, rankIndex) => {
+    const { item, index, count } = entry;
+
+    const key = getTrackKey(item, index);
+    const row = document.createElement("label");
+    row.className = "offline-picker-item";
+
+    const artist = item.artist || "Artista desconhecido";
+    const title = item.title || `Faixa ${index + 1}`;
+    const category = item.category || "Sem categoria";
+    const duration = item.duration || "--:--";
+
+    row.innerHTML = `
+      <input type="checkbox" class="offline-checkbox" value="${key}">
+      <span class="offline-rank">${rankIndex + 1}</span>
+
+      <span class="offline-info">
+        <strong>${title}</strong>
+        <small>${artist} · ${category}</small>
+      </span>
+
+      <span class="offline-meta">
+        <span>${duration}</span>
+        <small>${count} download${count === 1 ? "" : "s"}</small>
+      </span>
+    `;
+
+    const checkbox = row.querySelector(".offline-checkbox");
+
+    checkbox.checked = selectedOfflineKeys.has(key);
+
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        if (selectedOfflineKeys.size >= MAX_OFFLINE_SELECTION) {
+          checkbox.checked = false;
+          setOfflineCacheStatus(`Escolha no máximo ${MAX_OFFLINE_SELECTION} músicas por vez.`, "warning");
+          return;
+        }
+
+        selectedOfflineKeys.add(key);
+      } else {
+        selectedOfflineKeys.delete(key);
+      }
+
+      updateOfflineSelectedCount();
+    });
+
+    fragment.appendChild(row);
+  });
+
+  elements.offlinePickerList.innerHTML = "";
+  elements.offlinePickerList.appendChild(fragment);
+
+  updateOfflineSelectedCount();
+}
+
+function updateOfflineSelectedCount() {
+  elements.offlineSelectedCount.textContent = `${selectedOfflineKeys.size}/${MAX_OFFLINE_SELECTION} selecionadas`;
+}
+
+function selectTopOfflineTracks() {
+  selectedOfflineKeys.clear();
+
+  getAudiosSortedByDownloads()
+    .slice(0, MAX_OFFLINE_SELECTION)
+    .forEach((entry) => selectedOfflineKeys.add(entry.key));
+
+  renderOfflinePickerList();
+  setOfflineCacheStatus("Top 10 marcado para salvar offline.", "success");
+}
+
+function clearOfflineSelection() {
+  selectedOfflineKeys.clear();
+  renderOfflinePickerList();
+  setOfflineCacheStatus("Seleção offline limpa.");
+}
+
+async function cacheSelectedOfflineTracks() {
+  const selectedEntries = audios
+    .map((item, index) => ({
+      item,
+      index,
+      key: getTrackKey(item, index),
+    }))
+    .filter((entry) => selectedOfflineKeys.has(entry.key) && entry.item.file)
+    .slice(0, MAX_OFFLINE_SELECTION);
+
+  if (!selectedEntries.length) {
+    setOfflineCacheStatus("Selecione pelo menos uma música.", "warning");
+    return;
+  }
+
+  const urls = selectedEntries.map((entry) => getTrackUrl(entry.item));
+
+  setOfflineCacheStatus(`Salvando ${urls.length} música${urls.length === 1 ? "" : "s"} offline...`);
+
+  try {
+    await cacheMediaFiles(urls);
+    setOfflineCacheStatus(`${urls.length} música${urls.length === 1 ? "" : "s"} salva${urls.length === 1 ? "" : "s"} offline.`, "success");
+  } catch (error) {
+    console.error(error);
+    setOfflineCacheStatus("Não foi possível salvar todas as músicas offline.", "error");
+  }
 }
 
 function startFileDownload(url, fileName) {
@@ -417,10 +550,10 @@ function updateConnectionStatus() {
 
   if (isOnline) {
     elements.connectionStatusText.textContent = "Online";
-    setOfflineCacheStatus("Conexão restaurada. Músicas acessadas podem continuar do cache.", "success");
+    setOfflineCacheStatus("Conexão restaurada. O cache automático continua ativo.", "success");
   } else {
     elements.connectionStatusText.textContent = "Sem conexão";
-    setOfflineCacheStatus("Sem internet. O que já estiver em cache ainda pode funcionar.", "warning");
+    setOfflineCacheStatus("Sem internet. Apenas músicas já salvas/cacheadas devem funcionar.", "warning");
   }
 }
 
@@ -433,7 +566,11 @@ async function registerServiceWorker() {
   try {
     serviceWorkerRegistration = await navigator.serviceWorker.register("./service-worker.js");
 
-    setOfflineCacheStatus("Cache ativo. Músicas acessadas serão reaproveitadas.", "success");
+    await navigator.serviceWorker.ready;
+
+    setOfflineCacheStatus("Cache ativo: música atual + próximas 5 serão salvas automaticamente.", "success");
+
+    sendMediaManifestToServiceWorker();
 
     if (serviceWorkerRegistration.waiting) {
       serviceWorkerRegistration.waiting.postMessage({
@@ -446,10 +583,20 @@ async function registerServiceWorker() {
   }
 }
 
+function getServiceWorkerTarget() {
+  return navigator.serviceWorker?.controller ||
+    serviceWorkerRegistration?.active ||
+    serviceWorkerRegistration?.waiting ||
+    serviceWorkerRegistration?.installing ||
+    null;
+}
+
 function sendMessageToServiceWorker(message) {
   return new Promise((resolve, reject) => {
-    if (!navigator.serviceWorker?.controller) {
-      reject(new Error("Service Worker ainda não está controlando a página."));
+    const target = getServiceWorkerTarget();
+
+    if (!target) {
+      reject(new Error("Service Worker ainda não está ativo."));
       return;
     }
 
@@ -463,8 +610,26 @@ function sendMessageToServiceWorker(message) {
       }
     };
 
-    navigator.serviceWorker.controller.postMessage(message, [messageChannel.port2]);
+    target.postMessage(message, [messageChannel.port2]);
   });
+}
+
+function sendMediaManifestToServiceWorker() {
+  const urls = audios
+    .filter((item) => item.file)
+    .map((item) => getAbsoluteUrl(getTrackUrl(item)));
+
+  const message = {
+    type: "INIT_MEDIA_MANIFEST",
+    urls,
+    prefetchNextCount: 5,
+  };
+
+  const target = getServiceWorkerTarget();
+
+  if (target) {
+    target.postMessage(message);
+  }
 }
 
 async function cacheCoreFiles() {
@@ -479,36 +644,36 @@ async function cacheCoreFiles() {
     setOfflineCacheStatus("Arquivos principais salvos offline.", "success");
   } catch (error) {
     console.error(error);
-
-    if (!navigator.serviceWorker?.controller) {
-      setOfflineCacheStatus("Atualize a página uma vez para ativar o cache offline.", "warning");
-      return;
-    }
-
-    setOfflineCacheStatus("Não foi possível salvar os arquivos principais.", "error");
+    setOfflineCacheStatus("Atualize a página uma vez e tente novamente.", "warning");
   }
 }
 
-async function cacheMediaFile(url) {
-  if (!navigator.serviceWorker?.controller) {
+async function cacheMediaFiles(urls) {
+  if (!urls.length) {
     return;
   }
 
+  const absoluteUrls = urls.map((url) => getAbsoluteUrl(url));
+
   await sendMessageToServiceWorker({
     type: "CACHE_URLS",
-    urls: [url],
+    urls: absoluteUrls,
   });
 }
 
 function bindActions() {
   elements.refreshRanking.addEventListener("click", fetchGlobalRanking);
   elements.cacheCoreButton.addEventListener("click", cacheCoreFiles);
+  elements.selectTopOffline.addEventListener("click", selectTopOfflineTracks);
+  elements.clearOfflineSelection.addEventListener("click", clearOfflineSelection);
+  elements.cacheSelectedButton.addEventListener("click", cacheSelectedOfflineTracks);
 
   window.addEventListener("online", updateConnectionStatus);
   window.addEventListener("offline", updateConnectionStatus);
 
   navigator.serviceWorker?.addEventListener("controllerchange", () => {
-    setOfflineCacheStatus("Cache atualizado. Recarregue se notar instabilidade.", "success");
+    setOfflineCacheStatus("Cache atualizado. Recarregue a página para finalizar.", "success");
+    sendMediaManifestToServiceWorker();
   });
 }
 
@@ -520,6 +685,7 @@ async function startWebamp() {
     await registerServiceWorker();
 
     renderDownloadList();
+    renderOfflinePickerList();
     fetchGlobalRanking();
 
     validateEnvironment();
@@ -547,6 +713,8 @@ async function startWebamp() {
     setStatus("Webamp carregado com a skin Base 2.91.", "success");
 
     window.__webamp = webamp;
+
+    sendMediaManifestToServiceWorker();
   } catch (error) {
     console.error(error);
 
