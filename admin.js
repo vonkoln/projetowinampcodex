@@ -2,12 +2,12 @@ const ADMIN_CONFIG = {
   username: "admin",
 
   /*
-    Senha padrão: admin123
+    Usuário: admin
+    Senha: admin123
 
-    Isso é controle leve para site estático.
-    Troque depois usando a função gerarHashSenha("SUA_SENHA") no console.
+    Atenção: este login é apenas controle local em site estático.
   */
-  passwordHash: "240be518fabd2724d4bf8706148ed1ec7c4b80b84e6a2766a4bf7f5bd8c4cf6a",
+  passwordHash: "240be518fabd2724d4bf8706148ed1ec7c4b80b84e6a2766a4bf7f5bd8c4cf6a0",
 };
 
 const STORAGE_KEYS = {
