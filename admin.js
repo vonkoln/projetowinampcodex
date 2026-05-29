@@ -1,41 +1,21 @@
-const ADMIN_CONFIG = {
-  username: "admin",
+/*
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
+*/
 
-  /*
-    Usuário: admin
-    Senha: admin123
 
-    Atenção: este login é apenas controle local em site estático.
-  */
-  passwordHash: "240be518fabd2724d4bf8706148ed1ec7c4b80b84e6a2766a4bf7f5bd8c4cf6a0",
-};
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
+
 
 const STORAGE_KEYS = {
-  session: "hippodromo-admin-session",
-  customPlaylists: "hippodromo-custom-playlists",
-  hiddenPlaylists: "hippodromo-hidden-playlists",
+  token: "hippodromo-admin-token",
+  username: "hippodromo-admin-username",
 };
 
-const FIXED_PLAYLISTS = [
-  {
-    id: "hippodromo",
-    name: "Playlist Hippodromo",
-    repoUrl: "local",
-    fixed: true,
-  },
-  {
-    id: "redhot",
-    name: "Playlist Red Hot Chili Peppers",
-    repoUrl: "https://github.com/vonkoln/redhot",
-    fixed: true,
-  },
-  {
-    id: "raimundos",
-    name: "Playlist Raimundos",
-    repoUrl: "https://github.com/vonkoln/raimundos",
-    fixed: true,
-  },
-];
+const FIXED_PLAYLIST_IDS = new Set([
+  "hippodromo",
+  "redhot",
+  "raimundos",
+]);
 
 const elements = {
   loginCard: document.getElementById("login-card"),
@@ -46,7 +26,6 @@ const elements = {
 
   adminPanel: document.getElementById("admin-panel"),
   playlistManager: document.getElementById("playlist-manager"),
-  dangerZone: document.getElementById("danger-zone"),
 
   playlistForm: document.getElementById("playlist-form"),
   githubUrl: document.getElementById("github-url"),
@@ -57,16 +36,6 @@ const elements = {
   adminStatus: document.getElementById("admin-status"),
 
   playlistList: document.getElementById("playlist-list"),
-
-  clearCustomPlaylists: document.getElementById("clear-custom-playlists"),
-  clearHiddenPlaylists: document.getElementById("clear-hidden-playlists"),
-  dangerStatus: document.getElementById("danger-status"),
-};
-
-window.gerarHashSenha = async function gerarHashSenha(senha) {
-  const hash = await sha256(senha);
-  console.log(hash);
-  return hash;
 };
 
 function setStatus(element, message, type = "info") {
@@ -84,61 +53,153 @@ async function sha256(text) {
     .join("");
 }
 
-function isLoggedIn() {
-  return localStorage.getItem(STORAGE_KEYS.session) === "active";
+function getToken() {
+  return localStorage.getItem(STORAGE_KEYS.token) || "";
 }
 
-function setLoggedIn(value) {
-  if (value) {
-    localStorage.setItem(STORAGE_KEYS.session, "active");
-  } else {
-    localStorage.removeItem(STORAGE_KEYS.session);
+function setSession(token, username) {
+  localStorage.setItem(STORAGE_KEYS.token, token);
+  localStorage.setItem(STORAGE_KEYS.username, username);
+}
+
+function clearSession() {
+  localStorage.removeItem(STORAGE_KEYS.token);
+  localStorage.removeItem(STORAGE_KEYS.username);
+}
+
+function createJsonpRequest(params, timeoutMs = 10000) {
+  return new Promise((resolve, reject) => {
+    if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("COLE_AQUI")) {
+      reject(new Error("URL do Google Apps Script não configurada no admin.js."));
+      return;
+    }
+
+    const callbackName = `__adminCallback_${Date.now()}_${Math.round(Math.random() * 100000)}`;
+    const url = new URL(GOOGLE_SCRIPT_URL);
+
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.set(key, value ?? "");
+    });
+
+    url.searchParams.set("callback", callbackName);
+    url.searchParams.set("_", Date.now());
+
+    const script = document.createElement("script");
+    let finished = false;
+
+    const cleanup = () => {
+      finished = true;
+      delete window[callbackName];
+
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
+
+    const timer = window.setTimeout(() => {
+      if (finished) return;
+
+      cleanup();
+      reject(new Error("Tempo esgotado ao acessar o Apps Script."));
+    }, timeoutMs);
+
+    window[callbackName] = (payload) => {
+      window.clearTimeout(timer);
+      cleanup();
+
+      if (!payload || payload.ok === false) {
+        reject(new Error(payload?.error || "Resposta inválida do servidor."));
+        return;
+      }
+
+      resolve(payload);
+    };
+
+    script.onerror = () => {
+      window.clearTimeout(timer);
+      cleanup();
+      reject(new Error("Falha ao carregar resposta do Apps Script."));
+    };
+
+    script.src = url.toString();
+    document.body.appendChild(script);
+  });
+}
+
+async function handleLogin(event) {
+  event.preventDefault();
+
+  const username = elements.adminUser.value.trim();
+  const password = elements.adminPassword.value;
+
+  if (!username || !password) {
+    setStatus(elements.loginStatus, "Informe usuário e senha.", "warning");
+    return;
   }
 
-  renderAuthState();
+  setStatus(elements.loginStatus, "Validando login...");
+
+  try {
+    const passwordHash = await sha256(password);
+
+    const payload = await createJsonpRequest({
+      action: "adminLogin",
+      username,
+      passwordHash,
+    });
+
+    setSession(payload.token, payload.username);
+
+    elements.adminPassword.value = "";
+
+    setStatus(elements.loginStatus, "Login realizado.", "success");
+
+    await renderAuthState();
+  } catch (error) {
+    console.error(error);
+    setStatus(elements.loginStatus, error.message, "error");
+  }
 }
 
-function renderAuthState() {
-  const logged = isLoggedIn();
+async function checkSession() {
+  const token = getToken();
+
+  if (!token) {
+    return false;
+  }
+
+  try {
+    const payload = await createJsonpRequest({
+      action: "adminCheck",
+      token,
+    });
+
+    return !!payload.authenticated;
+  } catch {
+    return false;
+  }
+}
+
+async function renderAuthState() {
+  const logged = await checkSession();
 
   elements.loginCard.classList.toggle("hidden", logged);
   elements.adminPanel.classList.toggle("hidden", !logged);
   elements.playlistManager.classList.toggle("hidden", !logged);
-  elements.dangerZone.classList.toggle("hidden", !logged);
 
   if (logged) {
-    renderPlaylistManager();
+    await loadPlaylists();
   }
 }
 
-function getCustomPlaylists() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.customPlaylists);
-    const parsed = raw ? JSON.parse(raw) : [];
+function logout() {
+  clearSession();
 
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
+  elements.loginCard.classList.remove("hidden");
+  elements.adminPanel.classList.add("hidden");
+  elements.playlistManager.classList.add("hidden");
 
-function saveCustomPlaylists(playlists) {
-  localStorage.setItem(STORAGE_KEYS.customPlaylists, JSON.stringify(playlists));
-}
-
-function getHiddenPlaylistIds() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.hiddenPlaylists);
-    const parsed = raw ? JSON.parse(raw) : [];
-
-    return new Set(Array.isArray(parsed) ? parsed : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function saveHiddenPlaylistIds(hiddenSet) {
-  localStorage.setItem(STORAGE_KEYS.hiddenPlaylists, JSON.stringify([...hiddenSet]));
+  setStatus(elements.loginStatus, "Sessão encerrada.", "success");
 }
 
 function parseGithubRepoUrl(url) {
@@ -146,7 +207,7 @@ function parseGithubRepoUrl(url) {
   const parts = parsed.pathname.replace(/^\/+|\/+$/g, "").split("/");
 
   if (parsed.hostname !== "github.com" || parts.length < 2) {
-    throw new Error("Use um link válido do GitHub, exemplo: https://github.com/vonkoln/raimundos");
+    throw new Error("Use um link válido, exemplo: https://github.com/vonkoln/raimundos");
   }
 
   return {
@@ -202,10 +263,19 @@ function extractPlaylistNameFromReadme(readme, fallbackName) {
     return fallbackName;
   }
 
-  return heading
+  const cleanHeading = heading
     .replace(/^#+\s*/, "")
-    .replace(/^playlist\s*[:\-]?\s*/i, "Playlist ")
-    .trim() || fallbackName;
+    .trim();
+
+  if (!cleanHeading || /^playlist\s*d\.?$/i.test(cleanHeading)) {
+    return fallbackName;
+  }
+
+  if (/^playlist/i.test(cleanHeading)) {
+    return cleanHeading;
+  }
+
+  return `Playlist ${cleanHeading}`;
 }
 
 async function inspectGithubRepository() {
@@ -250,83 +320,85 @@ async function savePlaylistFromForm(event) {
       return;
     }
 
-    const customPlaylists = getCustomPlaylists();
-    const playlistId = createPlaylistId(inspected.owner, inspected.repo);
+    const id = createPlaylistId(inspected.owner, inspected.repo);
+    const name = elements.playlistName.value.trim() || inspected.name;
 
-    const playlist = {
-      id: playlistId,
-      name: elements.playlistName.value.trim() || inspected.name,
+    setStatus(elements.adminStatus, "Salvando playlist no servidor...");
+
+    await createJsonpRequest({
+      action: "adminSavePlaylist",
+      token: getToken(),
+      id,
+      name,
       subtitle: `Músicas carregadas do repositório GitHub ${inspected.owner}/${inspected.repo}`,
-      type: "github",
       owner: inspected.owner,
       repo: inspected.repo,
       branch: inspected.branch,
       dataFile: "data.js",
       filesPath: "files",
       repoUrl: inspected.repoUrl,
-      createdAt: new Date().toISOString(),
-    };
-
-    const existingIndex = customPlaylists.findIndex((item) => item.id === playlist.id);
-
-    if (existingIndex === -1) {
-      customPlaylists.push(playlist);
-    } else {
-      customPlaylists[existingIndex] = playlist;
-    }
-
-    saveCustomPlaylists(customPlaylists);
+      hidden: "false",
+    });
 
     elements.githubUrl.value = "";
     elements.playlistName.value = "";
     elements.playlistBranch.value = "";
 
-    setStatus(elements.adminStatus, `Playlist salva: ${playlist.name}`, "success");
-    renderPlaylistManager();
+    setStatus(elements.adminStatus, `Playlist salva: ${name}`, "success");
+
+    await loadPlaylists();
   } catch (error) {
     console.error(error);
     setStatus(elements.adminStatus, error.message, "error");
   }
 }
 
-function renderPlaylistManager() {
-  const hiddenIds = getHiddenPlaylistIds();
-  const customPlaylists = getCustomPlaylists();
+async function loadPlaylists() {
+  elements.playlistList.textContent = "Carregando playlists...";
 
-  const allPlaylists = [
-    ...FIXED_PLAYLISTS,
-    ...customPlaylists,
-  ];
+  try {
+    const payload = await createJsonpRequest({
+      action: "adminListPlaylists",
+      token: getToken(),
+    });
 
-  if (!allPlaylists.length) {
-    elements.playlistList.innerHTML = "Nenhuma playlist cadastrada.";
+    renderPlaylistManager(payload.playlists || []);
+  } catch (error) {
+    console.error(error);
+    elements.playlistList.textContent = "Erro ao carregar playlists.";
+  }
+}
+
+function renderPlaylistManager(playlists) {
+  if (!playlists.length) {
+    elements.playlistList.textContent = "Nenhuma playlist dinâmica cadastrada.";
     return;
   }
 
   const fragment = document.createDocumentFragment();
 
-  allPlaylists.forEach((playlist) => {
+  playlists.forEach((playlist) => {
     const row = document.createElement("div");
     row.className = "playlist-item";
 
-    const isHidden = hiddenIds.has(playlist.id);
+    const fixed = FIXED_PLAYLIST_IDS.has(playlist.id);
 
     row.innerHTML = `
       <div>
         <strong>${playlist.name}</strong>
-        <small>${playlist.repoUrl || `${playlist.owner}/${playlist.repo}` || "local"}</small>
-        <span class="badge ${isHidden ? "hidden-badge" : ""}">
-          ${playlist.fixed ? "fixa" : "adicionada"} · ${isHidden ? "escondida" : "visível"}
+        <small>${playlist.repoUrl || `${playlist.owner}/${playlist.repo}`}</small>
+        <span class="badge ${playlist.hidden ? "hidden-badge" : ""}">
+          ${fixed ? "fixa" : "dinâmica"} · ${playlist.hidden ? "escondida" : "visível"}
         </span>
       </div>
 
       <div class="playlist-actions">
-        <button type="button" class="secondary" data-action="${isHidden ? "show" : "hide"}" data-id="${playlist.id}">
-          ${isHidden ? "Mostrar" : "Esconder"}
+        <button type="button" class="secondary" data-action="toggle" data-hidden="${playlist.hidden ? "false" : "true"}" data-id="${playlist.id}">
+          ${playlist.hidden ? "Mostrar" : "Esconder"}
         </button>
 
         ${
-          playlist.fixed
+          fixed
             ? ""
             : `<button type="button" class="danger" data-action="delete" data-id="${playlist.id}">
                 Excluir
@@ -342,93 +414,54 @@ function renderPlaylistManager() {
   elements.playlistList.appendChild(fragment);
 
   elements.playlistList.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       const action = button.dataset.action;
       const id = button.dataset.id;
 
-      if (action === "hide") {
-        hidePlaylist(id);
-      }
-
-      if (action === "show") {
-        showPlaylist(id);
+      if (action === "toggle") {
+        await togglePlaylist(id, button.dataset.hidden);
       }
 
       if (action === "delete") {
-        deletePlaylist(id);
+        await deletePlaylist(id);
       }
     });
   });
 }
 
-function hidePlaylist(id) {
-  const hiddenIds = getHiddenPlaylistIds();
+async function togglePlaylist(id, hidden) {
+  try {
+    await createJsonpRequest({
+      action: "adminTogglePlaylist",
+      token: getToken(),
+      id,
+      hidden,
+    });
 
-  hiddenIds.add(id);
-  saveHiddenPlaylistIds(hiddenIds);
-  renderPlaylistManager();
+    await loadPlaylists();
+  } catch (error) {
+    alert(error.message);
+  }
 }
 
-function showPlaylist(id) {
-  const hiddenIds = getHiddenPlaylistIds();
-
-  hiddenIds.delete(id);
-  saveHiddenPlaylistIds(hiddenIds);
-  renderPlaylistManager();
-}
-
-function deletePlaylist(id) {
-  const confirmed = window.confirm("Deseja excluir esta playlist adicionada?");
+async function deletePlaylist(id) {
+  const confirmed = window.confirm("Deseja excluir esta playlist dinâmica?");
 
   if (!confirmed) {
     return;
   }
 
-  const customPlaylists = getCustomPlaylists()
-    .filter((playlist) => playlist.id !== id);
+  try {
+    await createJsonpRequest({
+      action: "adminDeletePlaylist",
+      token: getToken(),
+      id,
+    });
 
-  const hiddenIds = getHiddenPlaylistIds();
-  hiddenIds.delete(id);
-
-  saveCustomPlaylists(customPlaylists);
-  saveHiddenPlaylistIds(hiddenIds);
-
-  renderPlaylistManager();
-}
-
-function clearCustomPlaylists() {
-  const confirmed = window.confirm("Deseja excluir todas as playlists adicionadas?");
-
-  if (!confirmed) {
-    return;
+    await loadPlaylists();
+  } catch (error) {
+    alert(error.message);
   }
-
-  localStorage.removeItem(STORAGE_KEYS.customPlaylists);
-  setStatus(elements.dangerStatus, "Playlists adicionadas excluídas.", "success");
-  renderPlaylistManager();
-}
-
-function clearHiddenPlaylists() {
-  localStorage.removeItem(STORAGE_KEYS.hiddenPlaylists);
-  setStatus(elements.dangerStatus, "Todas as playlists escondidas voltaram a aparecer.", "success");
-  renderPlaylistManager();
-}
-
-async function handleLogin(event) {
-  event.preventDefault();
-
-  const user = elements.adminUser.value.trim();
-  const password = elements.adminPassword.value;
-  const passwordHash = await sha256(password);
-
-  if (user === ADMIN_CONFIG.username && passwordHash === ADMIN_CONFIG.passwordHash) {
-    setLoggedIn(true);
-    elements.adminPassword.value = "";
-    setStatus(elements.loginStatus, "");
-    return;
-  }
-
-  setStatus(elements.loginStatus, "Usuário ou senha inválidos.", "error");
 }
 
 function bindActions() {
@@ -444,17 +477,12 @@ function bindActions() {
     }
   });
 
-  elements.logoutButton.addEventListener("click", () => {
-    setLoggedIn(false);
-  });
-
-  elements.clearCustomPlaylists.addEventListener("click", clearCustomPlaylists);
-  elements.clearHiddenPlaylists.addEventListener("click", clearHiddenPlaylists);
+  elements.logoutButton.addEventListener("click", logout);
 }
 
-function start() {
+async function start() {
   bindActions();
-  renderAuthState();
+  await renderAuthState();
 }
 
 start();
