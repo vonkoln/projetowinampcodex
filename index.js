@@ -9,16 +9,6 @@ const SKIN_PATH = "./skin/base-2.91.wsz";
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
 
 
-const APP_CORE_CACHE_FILES = [
-  "./",
-  "./index.html",
-  "./index.js",
-  "./style.css",
-  "./manifest.json",
-  "./data/audios.js",
-  "./skin/base-2.91.wsz",
-];
-
 const MAX_OFFLINE_SELECTION = 10;
 
 const elements = {
@@ -29,7 +19,6 @@ const elements = {
   connectionBanner: document.getElementById("connection-banner"),
   connectionStatusText: document.getElementById("connection-status-text"),
 
-  cacheCoreButton: document.getElementById("cache-core-button"),
   offlineCacheStatus: document.getElementById("offline-cache-status"),
 
   autoProgressFill: document.getElementById("auto-progress-fill"),
@@ -547,7 +536,7 @@ async function registerServiceWorker() {
     serviceWorkerRegistration = await navigator.serviceWorker.register("./service-worker.js");
     await navigator.serviceWorker.ready;
 
-    setOfflineCacheStatus("Cache ativo: música atual + próximas 5 serão salvas automaticamente.", "success");
+    setOfflineCacheStatus("Cache automático ativo: música atual + próximas 5.", "success");
 
     sendMediaManifestToServiceWorker();
 
@@ -612,26 +601,6 @@ function sendMediaManifestToServiceWorker() {
 
   if (target) {
     target.postMessage(message);
-  }
-}
-
-async function cacheCoreFiles() {
-  setOfflineCacheStatus("Salvando arquivos principais offline...");
-
-  try {
-    await sendMessageToServiceWorker({
-      type: "CACHE_URLS",
-      items: APP_CORE_CACHE_FILES.map((url) => ({
-        url: getAbsoluteUrl(url),
-        name: url,
-      })),
-      scope: "core",
-    });
-
-    setOfflineCacheStatus("Arquivos principais salvos offline.", "success");
-  } catch (error) {
-    console.error(error);
-    setOfflineCacheStatus("Atualize a página uma vez e tente novamente.", "warning");
   }
 }
 
@@ -708,7 +677,6 @@ function handleServiceWorkerMessage(event) {
 
 function bindActions() {
   elements.refreshRanking.addEventListener("click", fetchGlobalRanking);
-  elements.cacheCoreButton.addEventListener("click", cacheCoreFiles);
   elements.selectTopOffline.addEventListener("click", selectTopOfflineTracks);
   elements.clearOfflineSelection.addEventListener("click", clearOfflineSelection);
   elements.cacheSelectedButton.addEventListener("click", cacheSelectedOfflineTracks);

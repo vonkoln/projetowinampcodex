@@ -156,47 +156,20 @@ select {
   color: var(--error);
 }
 
-.offline-tools {
+/* ========================================================= */
+/* STATUS OFFLINE */
+/* ========================================================= */
+
+.offline-status-line {
   margin-top: 10px;
   padding-top: 8px;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 8px;
-  align-items: center;
+  display: block;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   text-align: left;
 }
 
-.offline-button,
-.ranking-button {
-  padding: 6px 8px;
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.68);
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.offline-button:hover,
-.ranking-button:hover {
-  color: var(--accent);
-  border-color: rgba(236, 210, 123, 0.35);
-  background: rgba(236, 210, 123, 0.06);
-}
-
-.ranking-button.primary {
-  color: #10131d;
-  background: linear-gradient(180deg, #fff6b7 0%, #e1c75a 48%, #8a6a1b 100%);
-  border-color: #2a2108;
-}
-
-.ranking-button.primary:hover {
-  color: #10131d;
-  filter: brightness(1.08);
-}
-
 .offline-cache-status {
+  display: block;
   color: rgba(255, 255, 255, 0.45);
   font-size: 10px;
   font-weight: 700;
@@ -213,6 +186,37 @@ select {
 
 .offline-cache-status[data-type="error"] {
   color: rgba(255, 107, 107, 0.86);
+}
+
+/* ========================================================= */
+/* BOTÕES */
+/* ========================================================= */
+
+.ranking-button {
+  padding: 6px 8px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.ranking-button:hover {
+  color: var(--accent);
+  border-color: rgba(236, 210, 123, 0.35);
+  background: rgba(236, 210, 123, 0.06);
+}
+
+.ranking-button.primary {
+  color: #10131d;
+  background: linear-gradient(180deg, #fff6b7 0%, #e1c75a 48%, #8a6a1b 100%);
+  border-color: #2a2108;
+}
+
+.ranking-button.primary:hover {
+  color: #10131d;
+  filter: brightness(1.08);
 }
 
 /* ========================================================= */
@@ -563,10 +567,6 @@ select {
   #webamp-container {
     width: 300px;
     min-height: 560px;
-  }
-
-  .offline-tools {
-    grid-template-columns: 1fr;
   }
 
   .offline-picker-tools {
