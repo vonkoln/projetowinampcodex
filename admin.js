@@ -5,7 +5,6 @@ const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
 
-
 const STORAGE_KEYS = {
   token: "hippodromo-admin-token",
   username: "hippodromo-admin-username",
