@@ -30,7 +30,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font-family: inherit;
 }
 
@@ -96,7 +97,8 @@ label {
   font-weight: 800;
 }
 
-input {
+input,
+select {
   width: 100%;
   height: 38px;
   padding: 0 10px;
@@ -107,11 +109,21 @@ input {
   font-size: 13px;
 }
 
+select {
+  cursor: pointer;
+}
+
+select option {
+  color: #111111;
+  background: #ffffff;
+}
+
 input::placeholder {
   color: rgba(255, 255, 255, 0.32);
 }
 
-input:focus {
+input:focus,
+select:focus {
   border-color: rgba(236, 210, 123, 0.55);
   box-shadow: 0 0 0 2px rgba(236, 210, 123, 0.08);
 }
@@ -165,6 +177,43 @@ button.danger:hover {
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.repo-toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.repo-preview {
+  min-height: 42px;
+  padding: 10px;
+  color: rgba(255, 255, 255, 0.58);
+  background: rgba(0, 0, 0, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.repo-preview strong {
+  color: var(--accent);
+}
+
+.repo-preview[data-type="success"] {
+  color: rgba(65, 255, 49, 0.82);
+  border-color: rgba(65, 255, 49, 0.22);
+}
+
+.repo-preview[data-type="warning"] {
+  color: rgba(255, 209, 102, 0.88);
+  border-color: rgba(255, 209, 102, 0.24);
+}
+
+.repo-preview[data-type="error"] {
+  color: rgba(255, 107, 107, 0.88);
+  border-color: rgba(255, 107, 107, 0.26);
 }
 
 .status {
@@ -257,6 +306,10 @@ button.danger:hover {
 
   .admin-card {
     padding: 14px;
+  }
+
+  .repo-toolbar {
+    grid-template-columns: 1fr;
   }
 
   .button-row {

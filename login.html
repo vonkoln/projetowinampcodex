@@ -30,11 +30,11 @@
       <form class="form-grid" id="login-form">
         <label for="admin-user">
           Usuário
-          <input 
-            type="text" 
-            id="admin-user" 
+          <input
+            type="text"
+            id="admin-user"
             name="admin-user"
-            autocomplete="username" 
+            autocomplete="username"
             placeholder="admin"
             required
           >
@@ -42,11 +42,11 @@
 
         <label for="admin-password">
           Senha
-          <input 
-            type="password" 
-            id="admin-password" 
+          <input
+            type="password"
+            id="admin-password"
             name="admin-password"
-            autocomplete="current-password" 
+            autocomplete="current-password"
             placeholder="Digite a senha"
             required
           >
@@ -61,24 +61,43 @@
     </section>
 
     <section class="admin-card hidden" id="admin-panel">
-      <h2>Adicionar playlist do GitHub</h2>
+      <h2>Adicionar playlist do repositório vonkoln</h2>
 
       <form class="form-grid" id="playlist-form">
-        <label for="github-url">
-          Link do repositório GitHub
-          <input 
-            type="url" 
-            id="github-url" 
-            name="github-url"
-            placeholder="https://github.com/vonkoln/raimundos"
-          >
+
+        <div class="repo-toolbar">
+          <label for="repo-search">
+            Buscar na lista
+            <input
+              type="search"
+              id="repo-search"
+              name="repo-search"
+              placeholder="Digite parte do nome: raimundos, redhot..."
+              autocomplete="off"
+            >
+          </label>
+
+          <button type="button" class="secondary" id="refresh-repos">
+            Atualizar lista
+          </button>
+        </div>
+
+        <label for="repo-selector">
+          Repositórios disponíveis
+          <select id="repo-selector" name="repo-selector">
+            <option value="">Carregando repositórios...</option>
+          </select>
         </label>
+
+        <div class="repo-preview" id="repo-preview">
+          Selecione um repositório para verificar se ele contém data.js e pasta files.
+        </div>
 
         <label for="playlist-name">
           Nome da playlist
-          <input 
-            type="text" 
-            id="playlist-name" 
+          <input
+            type="text"
+            id="playlist-name"
             name="playlist-name"
             placeholder="Será preenchido pelo README, se possível"
           >
@@ -86,9 +105,9 @@
 
         <label for="playlist-branch">
           Branch
-          <input 
-            type="text" 
-            id="playlist-branch" 
+          <input
+            type="text"
+            id="playlist-branch"
             name="playlist-branch"
             placeholder="main ou master"
           >
@@ -96,7 +115,7 @@
 
         <div class="button-row">
           <button type="button" id="inspect-github">
-            Buscar dados
+            Verificar playlist
           </button>
 
           <button type="submit">
