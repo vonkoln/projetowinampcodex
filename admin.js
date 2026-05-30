@@ -1,119 +1,97 @@
+import hippodromoAudios from "./data/audios.js";
+
+const SKIN_PATH = "./skin/base-2.91.wsz";
+
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
 
-const GITHUB_OWNER = "vonkoln";
-
-const PLAYLIST_REQUIRED_DATA_FILE = "data.js";
-const PLAYLIST_REQUIRED_FILES_FOLDER = "files";
+const MAX_OFFLINE_SELECTION = 10;
 
 const STORAGE_KEYS = {
-  token: "hippodromo-admin-token",
-  username: "hippodromo-admin-username",
+  selectedPlaylist: "hippodromo-selected-playlist",
+};
+
+const LOCAL_PLAYLIST_DATA = {
+  hippodromo: {
+    audioBasePath: "./files/",
+    audios: hippodromoAudios,
+  },
+};
+
+const FALLBACK_PLAYLISTS = {
+  hippodromo: {
+    id: "hippodromo",
+    name: "Playlist Hippodromo",
+    subtitle: "Playlist local de emergência",
+    type: "local",
+    hidden: false,
+    fixed: true,
+  },
 };
 
 const elements = {
-  loginCard: document.getElementById("login-card"),
-  loginForm: document.getElementById("login-form"),
-  adminUser: document.getElementById("admin-user"),
-  adminPassword: document.getElementById("admin-password"),
-  loginStatus: document.getElementById("login-status"),
+  container: document.getElementById("webamp-container"),
+  status: document.getElementById("player-status"),
+  trackCount: document.getElementById("track-count"),
 
-  adminPanel: document.getElementById("admin-panel"),
-  playlistManager: document.getElementById("playlist-manager"),
+  playlistTitle: document.getElementById("playlist-title"),
+  playlistSubtitle: document.getElementById("playlist-subtitle"),
+  playlistSelector: document.getElementById("playlist-selector"),
 
-  playlistForm: document.getElementById("playlist-form"),
-  repoSearch: document.getElementById("repo-search"),
-  repoSelector: document.getElementById("repo-selector"),
-  repoPreview: document.getElementById("repo-preview"),
-  refreshRepos: document.getElementById("refresh-repos"),
+  connectionBanner: document.getElementById("connection-banner"),
+  connectionStatusText: document.getElementById("connection-status-text"),
 
-  playlistName: document.getElementById("playlist-name"),
-  playlistBranch: document.getElementById("playlist-branch"),
-  inspectGithub: document.getElementById("inspect-github"),
-  logoutButton: document.getElementById("logout-button"),
-  adminStatus: document.getElementById("admin-status"),
+  offlineCacheStatus: document.getElementById("offline-cache-status"),
 
-  playlistList: document.getElementById("playlist-list"),
+  autoProgressFill: document.getElementById("auto-progress-fill"),
+  autoItemProgress: document.getElementById("auto-item-progress"),
+  autoTotalProgress: document.getElementById("auto-total-progress"),
+  autoProgressName: document.getElementById("auto-progress-name"),
+
+  manualProgressFill: document.getElementById("manual-progress-fill"),
+  manualItemProgress: document.getElementById("manual-item-progress"),
+  manualTotalProgress: document.getElementById("manual-total-progress"),
+  manualProgressName: document.getElementById("manual-progress-name"),
+
+  offlinePickerList: document.getElementById("offline-picker-list"),
+  offlineSelectedCount: document.getElementById("offline-selected-count"),
+  selectTopOffline: document.getElementById("select-top-offline"),
+  clearOfflineSelection: document.getElementById("clear-offline-selection"),
+  cacheSelectedButton: document.getElementById("cache-selected-button"),
+
+  downloadList: document.getElementById("download-list"),
+  downloadCount: document.getElementById("download-count"),
+  refreshRanking: document.getElementById("refresh-ranking"),
 };
 
-let githubRepos = [];
-let filteredGithubRepos = [];
-let inspectedRepository = null;
-let isLoadingRepos = false;
+let currentPlaylist = null;
+let currentAudios = [];
+let currentAudioBasePath = "./files/";
 
-function on(element, eventName, handler) {
-  if (!element) {
-    console.warn(`Elemento não encontrado para evento ${eventName}.`);
-    return;
-  }
+let globalRanking = [];
+let rankingByTrackKey = new Map();
+let serviceWorkerRegistration = null;
+let selectedOfflineKeys = new Set();
+let webampInstance = null;
+let availablePlaylists = {};
 
-  element.addEventListener(eventName, handler);
+function setStatus(message, type = "info") {
+  elements.status.textContent = message;
+  elements.status.dataset.type = type;
 }
 
-function setStatus(element, message, type = "info") {
-  if (!element) {
-    console.warn(message);
-    return;
-  }
-
-  element.textContent = message;
-  element.dataset.type = type;
+function setOfflineCacheStatus(message, type = "info") {
+  elements.offlineCacheStatus.textContent = message;
+  elements.offlineCacheStatus.dataset.type = type;
 }
 
-function setRepoPreview(message, type = "info") {
-  if (!elements.repoPreview) {
-    return;
-  }
-
-  elements.repoPreview.innerHTML = message;
-  elements.repoPreview.dataset.type = type;
-}
-
-function setRepoSelectorMessage(message) {
-  if (!elements.repoSelector) {
-    return;
-  }
-
-  elements.repoSelector.innerHTML = "";
-
-  const option = document.createElement("option");
-  option.value = "";
-  option.textContent = message;
-
-  elements.repoSelector.appendChild(option);
-}
-
-async function sha256(text) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-
-  return [...new Uint8Array(hashBuffer)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function getToken() {
-  return localStorage.getItem(STORAGE_KEYS.token) || "";
-}
-
-function setSession(token, username) {
-  localStorage.setItem(STORAGE_KEYS.token, token);
-  localStorage.setItem(STORAGE_KEYS.username, username);
-}
-
-function clearSession() {
-  localStorage.removeItem(STORAGE_KEYS.token);
-  localStorage.removeItem(STORAGE_KEYS.username);
-}
-
-function createJsonpRequest(params, timeoutMs = 30000) {
+function createJsonpRequest(params, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
     if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("COLE_AQUI")) {
-      reject(new Error("URL do Google Apps Script não configurada no admin.js."));
+      reject(new Error("URL do Google Apps Script não configurada no index.js."));
       return;
     }
 
-    const callbackName = `__adminCallback_${Date.now()}_${Math.round(Math.random() * 100000)}`;
+    const callbackName = `__playerCallback_${Date.now()}_${Math.round(Math.random() * 100000)}`;
     const url = new URL(GOOGLE_SCRIPT_URL);
 
     Object.entries(params).forEach(([key, value]) => {
@@ -165,493 +143,863 @@ function createJsonpRequest(params, timeoutMs = 30000) {
   });
 }
 
-async function handleLogin(event) {
-  event.preventDefault();
-
-  const username = elements.adminUser?.value.trim() || "";
-  const password = elements.adminPassword?.value || "";
-
-  if (!username || !password) {
-    setStatus(elements.loginStatus, "Informe usuário e senha.", "warning");
-    return;
-  }
-
-  setStatus(elements.loginStatus, "Validando login...");
-
+async function loadPublicPlaylists() {
   try {
-    const passwordHash = await sha256(password);
-
     const payload = await createJsonpRequest({
-      action: "adminLogin",
-      username,
-      passwordHash,
+      action: "publicPlaylists",
     });
-
-    setSession(payload.token, payload.username);
-
-    if (elements.adminPassword) {
-      elements.adminPassword.value = "";
-    }
-
-    setStatus(elements.loginStatus, "Login realizado.", "success");
-
-    await renderAuthState();
-  } catch (error) {
-    console.error(error);
-    setStatus(elements.loginStatus, error.message, "error");
-  }
-}
-
-async function checkSession() {
-  const token = getToken();
-
-  if (!token) {
-    return false;
-  }
-
-  try {
-    const payload = await createJsonpRequest({
-      action: "adminCheck",
-      token,
-    });
-
-    return !!payload.authenticated;
-  } catch {
-    return false;
-  }
-}
-
-async function renderAuthState() {
-  const logged = await checkSession();
-
-  elements.loginCard?.classList.toggle("hidden", logged);
-  elements.adminPanel?.classList.toggle("hidden", !logged);
-  elements.playlistManager?.classList.toggle("hidden", !logged);
-
-  if (logged) {
-    loadVonkolnRepositories(false);
-    loadPlaylists();
-  }
-}
-
-function logout() {
-  clearSession();
-
-  elements.loginCard?.classList.remove("hidden");
-  elements.adminPanel?.classList.add("hidden");
-  elements.playlistManager?.classList.add("hidden");
-
-  setStatus(elements.loginStatus, "Sessão encerrada.", "success");
-}
-
-async function loadVonkolnRepositories(force = false) {
-  if (isLoadingRepos) {
-    return;
-  }
-
-  isLoadingRepos = true;
-  githubRepos = [];
-  filteredGithubRepos = [];
-  inspectedRepository = null;
-
-  setRepoSelectorMessage("Carregando playlists...");
-  setStatus(elements.adminStatus, "Buscando playlists filtradas no servidor...");
-  setRepoPreview("Consultando lista cacheada de playlists válidas...", "info");
-
-  try {
-    const payload = await createJsonpRequest({
-      action: "listGithubPlaylists",
-      token: getToken(),
-      force: force ? "true" : "false",
-    }, 60000);
 
     const playlists = Array.isArray(payload.playlists)
       ? payload.playlists
       : [];
 
-    githubRepos = playlists.map((playlist) => ({
-      name: playlist.repo,
-      fullName: `${playlist.owner}/${playlist.repo}`,
-      owner: playlist.owner || GITHUB_OWNER,
-      defaultBranch: playlist.branch || "main",
-      description: playlist.description || playlist.name || "",
-      htmlUrl: playlist.repoUrl || `https://github.com/${playlist.owner}/${playlist.repo}`,
-      updatedAt: playlist.updatedAt || "",
-      playlistName: playlist.name || `Playlist ${playlist.repo}`,
-      dataFile: playlist.dataFile || PLAYLIST_REQUIRED_DATA_FILE,
-      filesPath: playlist.filesPath || PLAYLIST_REQUIRED_FILES_FOLDER,
-    }));
+    availablePlaylists = {};
 
-    filteredGithubRepos = [...githubRepos];
+    playlists.forEach((playlist) => {
+      if (!playlist?.id) {
+        return;
+      }
 
-    renderRepoSelector();
+      availablePlaylists[playlist.id] = {
+        id: playlist.id,
+        name: playlist.name || `Playlist ${playlist.repo || playlist.id}`,
+        subtitle: playlist.subtitle || "",
+        type: playlist.type || "github",
+        owner: playlist.owner || "",
+        repo: playlist.repo || "",
+        branch: playlist.branch || "main",
+        dataFile: playlist.dataFile || "data.js",
+        filesPath: playlist.filesPath || "files",
+        repoUrl: playlist.repoUrl || "",
+        hidden: !!playlist.hidden,
+        fixed: !!playlist.fixed,
+      };
+    });
 
-    if (githubRepos.length) {
-      setStatus(
-        elements.adminStatus,
-        `${githubRepos.length} playlist(s) válida(s) encontrada(s)${payload.cached ? " em cache" : ""}.`,
-        "success"
-      );
-
-      setRepoPreview(
-        `Lista pronta. Foram exibidos apenas repositórios de <strong>${GITHUB_OWNER}</strong> com <strong>${PLAYLIST_REQUIRED_DATA_FILE}</strong> e pasta <strong>${PLAYLIST_REQUIRED_FILES_FOLDER}/</strong>. ${payload.cached ? "Resultado vindo do cache." : "Resultado atualizado agora."}`,
-        "success"
-      );
-    } else {
-      setRepoSelectorMessage("Nenhuma playlist válida encontrada");
-      setStatus(elements.adminStatus, "Nenhuma playlist válida encontrada.", "warning");
-      setRepoPreview(
-        `Nenhuma playlist válida encontrada no repositório ${GITHUB_OWNER}.`,
-        "warning"
-      );
+    if (!Object.keys(availablePlaylists).length) {
+      throw new Error("Nenhuma playlist pública disponível.");
     }
+
+    populatePlaylistSelector();
+    setOfflineCacheStatus("Playlists públicas sincronizadas.", "success");
   } catch (error) {
     console.error(error);
 
-    setRepoSelectorMessage("Erro ao carregar playlists");
-    setStatus(elements.adminStatus, error.message, "error");
+    availablePlaylists = {
+      ...FALLBACK_PLAYLISTS,
+    };
 
-    setRepoPreview(
-      `Erro ao carregar playlists.<br>${error.message}`,
-      "error"
-    );
-  } finally {
-    isLoadingRepos = false;
+    populatePlaylistSelector();
+    setOfflineCacheStatus("Usando playlist local de emergência.", "warning");
   }
 }
 
-function renderRepoSelector() {
-  if (!elements.repoSelector) {
-    return;
-  }
+function populatePlaylistSelector() {
+  elements.playlistSelector.innerHTML = "";
 
-  elements.repoSelector.innerHTML = "";
-
-  if (!filteredGithubRepos.length) {
-    const option = document.createElement("option");
-    option.value = "";
-    option.textContent = "Nenhuma playlist encontrada";
-    elements.repoSelector.appendChild(option);
-    return;
-  }
-
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Selecione uma playlist";
-  elements.repoSelector.appendChild(placeholder);
-
-  filteredGithubRepos.forEach((repo) => {
+  Object.values(availablePlaylists).forEach((playlist) => {
     const option = document.createElement("option");
 
-    option.value = repo.name;
-    option.textContent = repo.playlistName && repo.playlistName !== repo.name
-      ? `${repo.playlistName} — ${repo.name}`
-      : repo.name;
+    option.value = playlist.id;
+    option.textContent = playlist.name.replace(/^Playlist\s+/i, "");
 
-    elements.repoSelector.appendChild(option);
+    elements.playlistSelector.appendChild(option);
   });
 }
 
-function filterRepoList() {
-  const query = elements.repoSearch?.value.trim().toLowerCase() || "";
+function parseDurationToSeconds(duration) {
+  if (!duration || typeof duration !== "string") return undefined;
 
-  inspectedRepository = null;
+  const parts = duration.split(":").map((part) => Number(part.trim()));
 
-  if (!query) {
-    filteredGithubRepos = [...githubRepos];
-  } else {
-    filteredGithubRepos = githubRepos.filter((repo) => {
-      return repo.name.toLowerCase().includes(query) ||
-        repo.fullName.toLowerCase().includes(query) ||
-        repo.description.toLowerCase().includes(query) ||
-        repo.playlistName.toLowerCase().includes(query);
-    });
+  if (parts.some((part) => Number.isNaN(part))) return undefined;
+
+  if (parts.length === 2) {
+    const [minutes, seconds] = parts;
+    return minutes * 60 + seconds;
   }
 
-  renderRepoSelector();
+  if (parts.length === 3) {
+    const [hours, minutes, seconds] = parts;
+    return hours * 3600 + minutes * 60 + seconds;
+  }
 
-  setRepoPreview(
-    `${filteredGithubRepos.length} playlist(s) encontrada(s) para a busca.`,
-    filteredGithubRepos.length ? "info" : "warning"
-  );
+  return undefined;
 }
 
-function getSelectedRepo() {
-  const selectedName = elements.repoSelector?.value || "";
+function normalizeAudioItem(item, index) {
+  return {
+    id: item.id ?? index + 1,
+    title: item.title || `Faixa ${index + 1}`,
+    artist: item.artist || "Artista desconhecido",
+    cover: item.cover || "",
+    file: item.file || "",
+    category: item.category || currentPlaylist?.name || "Sem categoria",
+    duration: item.duration || "--:--",
+  };
+}
 
-  if (!selectedName) {
+function normalizeTrack(item, index) {
+  const audio = normalizeAudioItem(item, index);
+
+  if (!audio.file) {
+    console.warn("Faixa ignorada por não possuir arquivo:", item);
     return null;
   }
 
-  return githubRepos.find((repo) => repo.name === selectedName) || null;
-}
+  const duration = parseDurationToSeconds(audio.duration);
 
-function createPlaylistId(owner, repo) {
-  return `${owner}-${repo}`
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-async function inspectGithubRepository() {
-  const selectedRepo = getSelectedRepo();
-
-  if (!selectedRepo) {
-    setStatus(elements.adminStatus, "Selecione uma playlist da lista.", "warning");
-    setRepoPreview("Nenhuma playlist selecionada.", "warning");
-    return null;
-  }
-
-  const owner = selectedRepo.owner;
-  const repo = selectedRepo.name;
-  const branch = elements.playlistBranch?.value.trim() || selectedRepo.defaultBranch || "main";
-  const name = elements.playlistName?.value.trim() || selectedRepo.playlistName || `Playlist ${repo}`;
-
-  if (elements.playlistName) {
-    elements.playlistName.value = name;
-  }
-
-  if (elements.playlistBranch) {
-    elements.playlistBranch.value = branch;
-  }
-
-  inspectedRepository = {
-    owner,
-    repo,
-    branch,
-    name,
-    repoUrl: selectedRepo.htmlUrl || `https://github.com/${owner}/${repo}`,
-    dataFile: selectedRepo.dataFile || PLAYLIST_REQUIRED_DATA_FILE,
-    filesPath: selectedRepo.filesPath || PLAYLIST_REQUIRED_FILES_FOLDER,
+  const track = {
+    url: getTrackUrl(audio),
+    metaData: {
+      title: audio.title,
+      artist: audio.artist,
+    },
   };
 
-  setStatus(elements.adminStatus, `Playlist válida encontrada: ${name}`, "success");
-  setRepoPreview(
-    `Playlist válida: <strong>${name}</strong><br>Repositório: ${owner}/${repo}<br>Branch: ${branch}<br>Arquivos esperados: ${inspectedRepository.dataFile} + ${inspectedRepository.filesPath}/`,
-    "success"
-  );
+  if (duration) {
+    track.duration = duration;
+  }
 
-  return inspectedRepository;
+  return track;
 }
 
-async function savePlaylistFromForm(event) {
-  event.preventDefault();
+function getInitialTracks() {
+  return currentAudios
+    .map(normalizeTrack)
+    .filter(Boolean);
+}
 
-  try {
-    const inspected = inspectedRepository || await inspectGithubRepository();
+function getTrackKey(item, index) {
+  const playlistPrefix = currentPlaylist?.id || "playlist";
 
-    if (!inspected) {
-      return;
+  if (item.id !== undefined && item.id !== null) {
+    return `${playlistPrefix}:id-${item.id}`;
+  }
+
+  if (item.file) {
+    return `${playlistPrefix}:file-${item.file}`;
+  }
+
+  return `${playlistPrefix}:index-${index}`;
+}
+
+function getTrackUrl(item) {
+  if (/^https?:\/\//i.test(item.file)) {
+    return item.file;
+  }
+
+  return `${currentAudioBasePath}${item.file}`;
+}
+
+function getAbsoluteUrl(url) {
+  return new URL(url, window.location.href).href;
+}
+
+function getGithubDataBaseUrl(playlist) {
+  return `https://cdn.jsdelivr.net/gh/${playlist.owner}/${playlist.repo}@${playlist.branch}/`;
+}
+
+function getGithubMediaBaseUrl(playlist) {
+  return `https://media.githubusercontent.com/media/${playlist.owner}/${playlist.repo}/${playlist.branch}/`;
+}
+
+function getSafeFileName(item, index) {
+  const artist = item.artist || "Artista";
+  const title = item.title || `Faixa ${index + 1}`;
+  const extension = item.file?.split(".").pop() || "mp3";
+
+  return `${currentPlaylist?.name || "Playlist"} - ${String(index + 1).padStart(2, "0")} - ${artist} - ${title}.${extension}`
+    .replace(/[\\/:*?"<>|]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getTrackLabel(item, index) {
+  const artist = item.artist || "Artista desconhecido";
+  const title = item.title || `Faixa ${index + 1}`;
+
+  return `${artist} - ${title}`;
+}
+
+async function loadPlaylist(playlistId) {
+  const playlist = availablePlaylists[playlistId] ||
+    availablePlaylists.hippodromo ||
+    Object.values(availablePlaylists)[0];
+
+  if (!playlist) {
+    throw new Error("Nenhuma playlist disponível.");
+  }
+
+  setStatus(`Carregando ${playlist.name}...`);
+  setOfflineCacheStatus("Preparando cache da playlist...");
+
+  currentPlaylist = playlist;
+  selectedOfflineKeys.clear();
+
+  elements.playlistTitle.textContent = playlist.name;
+  elements.playlistSubtitle.textContent = playlist.subtitle || "";
+  elements.playlistSelector.value = playlist.id;
+  document.title = playlist.name;
+
+  localStorage.setItem(STORAGE_KEYS.selectedPlaylist, playlist.id);
+
+  if (playlist.type === "local") {
+    const localData = LOCAL_PLAYLIST_DATA[playlist.id];
+
+    if (!localData) {
+      throw new Error(`Dados locais não encontrados para ${playlist.name}.`);
     }
 
-    const id = createPlaylistId(inspected.owner, inspected.repo);
-    const name = elements.playlistName?.value.trim() || inspected.name;
-
-    setStatus(elements.adminStatus, "Salvando playlist no servidor...");
-
-    await createJsonpRequest({
-      action: "adminSavePlaylist",
-      token: getToken(),
-      id,
-      name,
-      subtitle: `Músicas carregadas do repositório GitHub ${inspected.owner}/${inspected.repo}`,
-      owner: inspected.owner,
-      repo: inspected.repo,
-      branch: inspected.branch,
-      dataFile: inspected.dataFile || PLAYLIST_REQUIRED_DATA_FILE,
-      filesPath: inspected.filesPath || PLAYLIST_REQUIRED_FILES_FOLDER,
-      repoUrl: inspected.repoUrl,
-      hidden: "false",
-    });
-
-    inspectedRepository = null;
-
-    if (elements.repoSelector) elements.repoSelector.value = "";
-    if (elements.repoSearch) elements.repoSearch.value = "";
-    if (elements.playlistName) elements.playlistName.value = "";
-    if (elements.playlistBranch) elements.playlistBranch.value = "";
-
-    filteredGithubRepos = [...githubRepos];
-    renderRepoSelector();
-
-    setRepoPreview("Playlist salva. Selecione outra playlist para cadastrar.", "success");
-    setStatus(elements.adminStatus, `Playlist salva: ${name}`, "success");
-
-    await loadPlaylists();
-  } catch (error) {
-    console.error(error);
-    setStatus(elements.adminStatus, error.message, "error");
+    currentAudioBasePath = localData.audioBasePath;
+    currentAudios = localData.audios.map(normalizeAudioItem);
   }
+
+  if (playlist.type === "github") {
+    const data = await loadGithubPlaylistData(playlist);
+
+    currentAudioBasePath = `${getGithubMediaBaseUrl(playlist)}${playlist.filesPath || "files"}/`;
+    currentAudios = data.map(normalizeAudioItem);
+  }
+
+  await renderCurrentPlaylist();
 }
 
-async function loadPlaylists() {
-  if (elements.playlistList) {
-    elements.playlistList.textContent = "Carregando playlists...";
+async function loadGithubPlaylistData(playlist) {
+  if (!playlist.owner || !playlist.repo) {
+    throw new Error(`Dados do repositório ausentes para ${playlist.name}.`);
   }
+
+  const dataUrl = `${getGithubDataBaseUrl(playlist)}${playlist.dataFile || "data.js"}`;
+
+  const response = await fetch(dataUrl, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Não foi possível carregar ${playlist.name}. Verifique se existe data.js no repositório.`);
+  }
+
+  const source = await response.text();
+
+  return parseExportDefaultArray(source);
+}
+
+function parseExportDefaultArray(source) {
+  const cleanSource = source
+    .replace(/^\s*export\s+default\s+/, "")
+    .replace(/;\s*$/, "");
 
   try {
-    const payload = await createJsonpRequest({
-      action: "adminListPlaylists",
-      token: getToken(),
-    });
+    const parsed = Function(`"use strict"; return (${cleanSource});`)();
 
-    renderPlaylistManager(payload.playlists || []);
+    if (!Array.isArray(parsed)) {
+      throw new Error("O arquivo data.js não retornou uma lista.");
+    }
+
+    return parsed;
   } catch (error) {
     console.error(error);
-
-    if (elements.playlistList) {
-      elements.playlistList.textContent = "Erro ao carregar playlists.";
-    }
+    throw new Error("Não foi possível interpretar o data.js da playlist.");
   }
 }
 
-function renderPlaylistManager(playlists) {
-  if (!elements.playlistList) {
+async function renderCurrentPlaylist() {
+  resetProgress("auto");
+  resetProgress("manual");
+
+  renderDownloadList();
+  renderOfflinePickerList();
+
+  sendMediaManifestToServiceWorker();
+
+  await fetchGlobalRanking();
+
+  await renderWebamp();
+}
+
+async function renderWebamp() {
+  validateEnvironment();
+
+  const tracks = getInitialTracks();
+
+  if (!tracks.length) {
+    setStatus("Nenhuma faixa encontrada nesta playlist.", "error");
+    updateTrackCount([]);
     return;
   }
 
-  if (!playlists.length) {
-    elements.playlistList.textContent = "Nenhuma playlist cadastrada.";
+  updateTrackCount(tracks);
+
+  try {
+    if (webampInstance && typeof webampInstance.dispose === "function") {
+      webampInstance.dispose();
+    }
+  } catch (error) {
+    console.warn("Não foi possível descartar a instância anterior do Webamp:", error);
+  }
+
+  elements.container.innerHTML = "";
+
+  webampInstance = new window.Webamp({
+    initialTracks: tracks,
+
+    initialSkin: {
+      url: SKIN_PATH,
+    },
+  });
+
+  await webampInstance.renderWhenReady(elements.container);
+
+  window.__webamp = webampInstance;
+
+  setStatus(`${currentPlaylist.name} carregada.`, "success");
+  sendMediaManifestToServiceWorker();
+}
+
+function updateRankingState(payload) {
+  globalRanking = Array.isArray(payload?.ranking) ? payload.ranking : [];
+  rankingByTrackKey = new Map();
+
+  globalRanking.forEach((item) => {
+    rankingByTrackKey.set(String(item.trackKey), {
+      ...item,
+      count: Number(item.count || 0),
+    });
+  });
+}
+
+function getGlobalDownloadCount(item, index) {
+  const key = getTrackKey(item, index);
+  const rankingItem = rankingByTrackKey.get(key);
+
+  return Number(rankingItem?.count || 0);
+}
+
+function getTotalGlobalDownloads() {
+  return currentAudios.reduce((total, item, index) => {
+    if (!item.file) return total;
+
+    return total + getGlobalDownloadCount(item, index);
+  }, 0);
+}
+
+function getAudiosSortedByDownloads() {
+  return currentAudios
+    .map((item, index) => ({
+      item,
+      index,
+      key: getTrackKey(item, index),
+      count: item.file ? getGlobalDownloadCount(item, index) : 0,
+      label: getTrackLabel(item, index),
+    }))
+    .filter((entry) => entry.item.file)
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+
+      return a.label.localeCompare(b.label, "pt-BR");
+    });
+}
+
+async function registerGlobalDownload(item, index) {
+  const payload = await createJsonpRequest({
+    action: "download",
+    playlistId: currentPlaylist.id,
+    playlistName: currentPlaylist.name,
+    trackKey: getTrackKey(item, index),
+    id: item.id || "",
+    artist: item.artist || "Artista desconhecido",
+    title: item.title || `Faixa ${index + 1}`,
+    file: item.file || "",
+    category: item.category || currentPlaylist.name || "Sem categoria",
+  });
+
+  updateRankingState(payload);
+  renderDownloadList();
+  renderOfflinePickerList();
+
+  return payload;
+}
+
+async function fetchGlobalRanking() {
+  elements.downloadList.innerHTML = `<p class="download-empty">Atualizando lista por downloads globais...</p>`;
+
+  try {
+    const payload = await createJsonpRequest({
+      action: "ranking",
+      playlistId: currentPlaylist?.id || "",
+    });
+
+    updateRankingState(payload);
+    renderDownloadList();
+    renderOfflinePickerList();
+  } catch (error) {
+    console.error(error);
+
+    elements.downloadList.innerHTML = `
+      <p class="download-empty">
+        Não foi possível carregar os downloads globais. A lista será exibida em ordem alfabética.
+      </p>
+    `;
+
+    renderDownloadList();
+    renderOfflinePickerList();
+  }
+}
+
+function renderDownloadList() {
+  const sortedAudios = getAudiosSortedByDownloads();
+  const totalFiles = sortedAudios.length;
+  const totalDownloads = getTotalGlobalDownloads();
+
+  elements.downloadCount.textContent =
+    `${totalFiles} arquivo${totalFiles === 1 ? "" : "s"} · ${totalDownloads} download${totalDownloads === 1 ? "" : "s"}`;
+
+  if (!sortedAudios.length) {
+    elements.downloadList.innerHTML = `<p class="download-empty">Nenhum arquivo disponível para download.</p>`;
     return;
   }
 
   const fragment = document.createDocumentFragment();
 
-  playlists.forEach((playlist) => {
-    const row = document.createElement("div");
-    row.className = "playlist-item";
+  sortedAudios.forEach((entry, rankIndex) => {
+    const { item, index, count } = entry;
+    const link = document.createElement("a");
 
-    const fixed = !!playlist.fixed;
+    const artist = item.artist || "Artista desconhecido";
+    const title = item.title || `Faixa ${index + 1}`;
+    const category = item.category || currentPlaylist.name || "Sem categoria";
+    const duration = item.duration || "--:--";
+
+    link.href = getTrackUrl(item);
+    link.download = getSafeFileName(item, index);
+    link.className = "download-item";
+    link.dataset.trackKey = getTrackKey(item, index);
+
+    if (rankIndex === 0 && count > 0) {
+      link.classList.add("is-top-download");
+    }
+
+    link.innerHTML = `
+      <span class="download-rank">${rankIndex + 1}</span>
+
+      <span class="download-info">
+        <strong>${title}</strong>
+        <small>${artist} · ${category}</small>
+      </span>
+
+      <span class="download-meta">
+        <span class="download-duration">${duration}</span>
+        <span class="download-counter">${count} download${count === 1 ? "" : "s"}</span>
+      </span>
+    `;
+
+    link.addEventListener("click", async (event) => {
+      event.preventDefault();
+
+      setStatus(`Registrando download: ${artist} - ${title}...`);
+
+      try {
+        await cacheMediaFiles([getTrackCacheItem(item, index)], "manual");
+      } catch (error) {
+        console.warn("Não foi possível pré-cachear antes do download:", error);
+      }
+
+      try {
+        await registerGlobalDownload(item, index);
+        setStatus(`Download registrado: ${artist} - ${title}.`, "success");
+      } catch (error) {
+        console.error(error);
+        setStatus("Download iniciado, mas não foi possível registrar no contador global.", "error");
+      } finally {
+        startFileDownload(link.href, link.download);
+      }
+    });
+
+    fragment.appendChild(link);
+  });
+
+  elements.downloadList.innerHTML = "";
+  elements.downloadList.appendChild(fragment);
+}
+
+function renderOfflinePickerList() {
+  const sortedAudios = getAudiosSortedByDownloads();
+
+  if (!sortedAudios.length) {
+    elements.offlinePickerList.innerHTML = `<p class="download-empty">Nenhuma música disponível para salvar offline.</p>`;
+    updateOfflineSelectedCount();
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  sortedAudios.forEach((entry, rankIndex) => {
+    const { item, index, count } = entry;
+
+    const key = getTrackKey(item, index);
+    const row = document.createElement("label");
+    row.className = "offline-picker-item";
+
+    const artist = item.artist || "Artista desconhecido";
+    const title = item.title || `Faixa ${index + 1}`;
+    const category = item.category || currentPlaylist.name || "Sem categoria";
+    const duration = item.duration || "--:--";
 
     row.innerHTML = `
-      <div>
-        <strong>${playlist.name}</strong>
-        <small>${playlist.repoUrl || `${playlist.owner}/${playlist.repo}` || "local"}</small>
-        <span class="badge ${playlist.hidden ? "hidden-badge" : ""}">
-          ${fixed ? "fixa" : "dinâmica"} · ${playlist.hidden ? "escondida" : "visível"}
-        </span>
-      </div>
+      <input type="checkbox" class="offline-checkbox" value="${key}">
+      <span class="offline-rank">${rankIndex + 1}</span>
 
-      <div class="playlist-actions">
-        <button type="button" class="secondary" data-action="toggle" data-hidden="${playlist.hidden ? "false" : "true"}" data-id="${playlist.id}">
-          ${playlist.hidden ? "Mostrar" : "Esconder"}
-        </button>
+      <span class="offline-info">
+        <strong>${title}</strong>
+        <small>${artist} · ${category}</small>
+      </span>
 
-        ${
-          fixed
-            ? ""
-            : `<button type="button" class="danger" data-action="delete" data-id="${playlist.id}">
-                Excluir
-              </button>`
-        }
-      </div>
+      <span class="offline-meta">
+        <span>${duration}</span>
+        <small>${count} download${count === 1 ? "" : "s"}</small>
+      </span>
     `;
+
+    const checkbox = row.querySelector(".offline-checkbox");
+    checkbox.checked = selectedOfflineKeys.has(key);
+
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        if (selectedOfflineKeys.size >= MAX_OFFLINE_SELECTION) {
+          checkbox.checked = false;
+          setOfflineCacheStatus(`Escolha no máximo ${MAX_OFFLINE_SELECTION} músicas por vez.`, "warning");
+          return;
+        }
+
+        selectedOfflineKeys.add(key);
+      } else {
+        selectedOfflineKeys.delete(key);
+      }
+
+      updateOfflineSelectedCount();
+    });
 
     fragment.appendChild(row);
   });
 
-  elements.playlistList.innerHTML = "";
-  elements.playlistList.appendChild(fragment);
+  elements.offlinePickerList.innerHTML = "";
+  elements.offlinePickerList.appendChild(fragment);
 
-  elements.playlistList.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const action = button.dataset.action;
-      const id = button.dataset.id;
-
-      if (action === "toggle") {
-        await togglePlaylist(id, button.dataset.hidden);
-      }
-
-      if (action === "delete") {
-        await deletePlaylist(id);
-      }
-    });
-  });
+  updateOfflineSelectedCount();
 }
 
-async function togglePlaylist(id, hidden) {
-  try {
-    await createJsonpRequest({
-      action: "adminTogglePlaylist",
-      token: getToken(),
-      id,
-      hidden,
-    });
+function updateOfflineSelectedCount() {
+  elements.offlineSelectedCount.textContent = `${selectedOfflineKeys.size}/${MAX_OFFLINE_SELECTION} selecionadas`;
+}
 
-    await loadPlaylists();
+function selectTopOfflineTracks() {
+  selectedOfflineKeys.clear();
+
+  getAudiosSortedByDownloads()
+    .slice(0, MAX_OFFLINE_SELECTION)
+    .forEach((entry) => selectedOfflineKeys.add(entry.key));
+
+  renderOfflinePickerList();
+  setOfflineCacheStatus("Top 10 marcado para salvar offline.", "success");
+}
+
+function clearOfflineSelection() {
+  selectedOfflineKeys.clear();
+  renderOfflinePickerList();
+  setOfflineCacheStatus("Seleção offline limpa.");
+}
+
+function getTrackCacheItem(item, index) {
+  return {
+    url: getAbsoluteUrl(getTrackUrl(item)),
+    name: getTrackLabel(item, index),
+  };
+}
+
+async function cacheSelectedOfflineTracks() {
+  const selectedEntries = currentAudios
+    .map((item, index) => ({
+      item,
+      index,
+      key: getTrackKey(item, index),
+    }))
+    .filter((entry) => selectedOfflineKeys.has(entry.key) && entry.item.file)
+    .slice(0, MAX_OFFLINE_SELECTION);
+
+  if (!selectedEntries.length) {
+    setOfflineCacheStatus("Selecione pelo menos uma música.", "warning");
+    return;
+  }
+
+  const items = selectedEntries.map((entry) => getTrackCacheItem(entry.item, entry.index));
+
+  resetProgress("manual");
+  setOfflineCacheStatus(`Salvando ${items.length} música${items.length === 1 ? "" : "s"} offline...`);
+
+  try {
+    await cacheMediaFiles(items, "manual");
+    setOfflineCacheStatus(`${items.length} música${items.length === 1 ? "" : "s"} salva${items.length === 1 ? "" : "s"} offline.`, "success");
   } catch (error) {
-    alert(error.message);
+    console.error(error);
+    setOfflineCacheStatus("Não foi possível salvar todas as músicas offline.", "error");
   }
 }
 
-async function deletePlaylist(id) {
-  const confirmed = window.confirm("Deseja excluir esta playlist dinâmica?");
+function startFileDownload(url, fileName) {
+  const link = document.createElement("a");
 
-  if (!confirmed) {
+  link.href = url;
+  link.download = fileName;
+  link.style.display = "none";
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function validateEnvironment() {
+  if (!elements.container) {
+    throw new Error("Container #webamp-container não encontrado.");
+  }
+
+  if (!window.Webamp) {
+    throw new Error("Webamp não foi carregado. Verifique sua conexão ou o script CDN no index.html.");
+  }
+
+  if (
+    typeof window.Webamp.browserIsSupported === "function" &&
+    !window.Webamp.browserIsSupported()
+  ) {
+    throw new Error("Este navegador não é compatível com Webamp.");
+  }
+}
+
+function updateTrackCount(tracks) {
+  const total = tracks.length;
+
+  elements.trackCount.textContent = `${total} faixa${total === 1 ? "" : "s"}`;
+}
+
+function updateConnectionStatus() {
+  const isOnline = navigator.onLine;
+
+  elements.connectionBanner.classList.toggle("is-online", isOnline);
+  elements.connectionBanner.classList.toggle("is-offline", !isOnline);
+
+  if (isOnline) {
+    elements.connectionStatusText.textContent = "Online";
+    setOfflineCacheStatus("Conexão restaurada. O cache automático continua ativo.", "success");
+  } else {
+    elements.connectionStatusText.textContent = "Sem conexão";
+    setOfflineCacheStatus("Sem internet. Apenas músicas já salvas/cacheadas devem funcionar.", "warning");
+  }
+}
+
+async function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    setOfflineCacheStatus("Service Worker não é suportado neste navegador.", "error");
     return;
   }
 
   try {
-    await createJsonpRequest({
-      action: "adminDeletePlaylist",
-      token: getToken(),
-      id,
+    serviceWorkerRegistration = await navigator.serviceWorker.register("./service-worker.js");
+    await navigator.serviceWorker.ready;
+
+    setOfflineCacheStatus("Cache automático ativo: música atual + próximas 5.", "success");
+
+    sendMediaManifestToServiceWorker();
+
+    if (serviceWorkerRegistration.waiting) {
+      serviceWorkerRegistration.waiting.postMessage({
+        type: "SKIP_WAITING",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    setOfflineCacheStatus("Não foi possível ativar o cache offline.", "error");
+  }
+}
+
+function getServiceWorkerTarget() {
+  return navigator.serviceWorker?.controller ||
+    serviceWorkerRegistration?.active ||
+    serviceWorkerRegistration?.waiting ||
+    serviceWorkerRegistration?.installing ||
+    null;
+}
+
+function sendMessageToServiceWorker(message, waitForFinal = true) {
+  return new Promise((resolve, reject) => {
+    const target = getServiceWorkerTarget();
+
+    if (!target) {
+      reject(new Error("Service Worker ainda não está ativo."));
+      return;
+    }
+
+    const messageChannel = new MessageChannel();
+
+    messageChannel.port1.onmessage = (event) => {
+      if (event.data?.ok) {
+        resolve(event.data);
+      } else {
+        reject(new Error(event.data?.error || "Falha na comunicação com o Service Worker."));
+      }
+    };
+
+    target.postMessage(message, [messageChannel.port2]);
+
+    if (!waitForFinal) {
+      resolve({ ok: true });
+    }
+  });
+}
+
+function sendMediaManifestToServiceWorker() {
+  if (!currentAudios.length) return;
+
+  const items = currentAudios
+    .filter((item) => item.file)
+    .map((item, index) => getTrackCacheItem(item, index));
+
+  const message = {
+    type: "INIT_MEDIA_MANIFEST",
+    playlistId: currentPlaylist?.id || "",
+    items,
+    prefetchNextCount: 5,
+  };
+
+  const target = getServiceWorkerTarget();
+
+  if (target) {
+    target.postMessage(message);
+  }
+}
+
+async function cacheMediaFiles(items, scope) {
+  if (!items.length) return;
+
+  const normalizedItems = items.map((item) => ({
+    url: getAbsoluteUrl(item.url),
+    name: item.name || item.url,
+  }));
+
+  await sendMessageToServiceWorker({
+    type: "CACHE_URLS",
+    items: normalizedItems,
+    scope,
+  });
+}
+
+function resetProgress(scope) {
+  updateProgressBar({
+    scope,
+    itemName: scope === "manual"
+      ? "Aguardando músicas escolhidas..."
+      : "Aguardando música atual + próximas 5...",
+    itemPercent: 0,
+    totalPercent: 0,
+  });
+}
+
+function updateProgressBar(data) {
+  const itemPercent = Math.max(0, Math.min(100, Number(data.itemPercent || 0)));
+  const totalPercent = Math.max(0, Math.min(100, Number(data.totalPercent || 0)));
+  const itemName = data.itemName || "Aguardando...";
+
+  const isManual = data.scope === "manual";
+
+  const fill = isManual ? elements.manualProgressFill : elements.autoProgressFill;
+  const itemLabel = isManual ? elements.manualItemProgress : elements.autoItemProgress;
+  const totalLabel = isManual ? elements.manualTotalProgress : elements.autoTotalProgress;
+  const nameLabel = isManual ? elements.manualProgressName : elements.autoProgressName;
+
+  fill.style.width = `${itemPercent}%`;
+  itemLabel.textContent = `${Math.round(itemPercent)}%`;
+  totalLabel.textContent = `${Math.round(totalPercent)}%`;
+  nameLabel.textContent = itemName;
+
+  fill.classList.toggle("is-complete", itemPercent >= 100 && totalPercent >= 100);
+}
+
+function handleServiceWorkerMessage(event) {
+  const data = event.data || {};
+
+  if (data.type === "CACHE_PROGRESS") {
+    updateProgressBar(data);
+  }
+
+  if (data.type === "CACHE_DONE") {
+    updateProgressBar({
+      scope: data.scope,
+      itemName: data.message || "Download offline concluído.",
+      itemPercent: 100,
+      totalPercent: 100,
     });
 
-    await loadPlaylists();
-  } catch (error) {
-    alert(error.message);
+    if (data.scope === "auto") {
+      setOfflineCacheStatus("Música atual + próximas faixas salvas no cache.", "success");
+    }
+
+    if (data.scope === "manual") {
+      setOfflineCacheStatus("Músicas escolhidas salvas para ouvir offline.", "success");
+    }
   }
 }
 
 function bindActions() {
-  on(elements.loginForm, "submit", handleLogin);
-  on(elements.playlistForm, "submit", savePlaylistFromForm);
+  elements.refreshRanking.addEventListener("click", fetchGlobalRanking);
+  elements.selectTopOffline.addEventListener("click", selectTopOfflineTracks);
+  elements.clearOfflineSelection.addEventListener("click", clearOfflineSelection);
+  elements.cacheSelectedButton.addEventListener("click", cacheSelectedOfflineTracks);
 
-  on(elements.inspectGithub, "click", async () => {
+  elements.playlistSelector.addEventListener("change", async () => {
     try {
-      await inspectGithubRepository();
+      await loadPlaylist(elements.playlistSelector.value);
     } catch (error) {
       console.error(error);
-      setStatus(elements.adminStatus, error.message, "error");
+      setStatus(`Erro ao carregar playlist: ${error.message}`, "error");
     }
   });
 
-  on(elements.refreshRepos, "click", () => loadVonkolnRepositories(true));
-  on(elements.repoSearch, "input", filterRepoList);
+  window.addEventListener("online", updateConnectionStatus);
+  window.addEventListener("offline", updateConnectionStatus);
 
-  on(elements.repoSelector, "change", () => {
-    inspectedRepository = null;
+  navigator.serviceWorker?.addEventListener("message", handleServiceWorkerMessage);
 
-    const selectedRepo = getSelectedRepo();
+  navigator.serviceWorker?.addEventListener("controllerchange", () => {
+    setOfflineCacheStatus("Cache atualizado. Recarregue a página para finalizar.", "success");
+    sendMediaManifestToServiceWorker();
+  });
+}
 
-    if (!selectedRepo) {
-      setRepoPreview("Selecione uma playlist para verificar se ela contém data.js e pasta files.", "info");
-      return;
-    }
+async function startApp() {
+  try {
+    bindActions();
+    updateConnectionStatus();
 
-    if (elements.playlistBranch) {
-      elements.playlistBranch.value = selectedRepo.defaultBranch || "main";
-    }
+    await registerServiceWorker();
 
-    if (elements.playlistName) {
-      elements.playlistName.value = selectedRepo.playlistName || `Playlist ${selectedRepo.name.replace(/[-_]+/g, " ")}`;
-    }
+    resetProgress("auto");
+    resetProgress("manual");
 
-    setRepoPreview(
-      `Selecionado: <strong>${selectedRepo.fullName}</strong><br>Clique em <strong>Verificar playlist</strong> antes de salvar.`,
-      "info"
+    await loadPublicPlaylists();
+
+    const savedPlaylistId = localStorage.getItem(STORAGE_KEYS.selectedPlaylist) || "hippodromo";
+    const startPlaylistId = availablePlaylists[savedPlaylistId]
+      ? savedPlaylistId
+      : Object.keys(availablePlaylists)[0];
+
+    await loadPlaylist(startPlaylistId);
+  } catch (error) {
+    console.error(error);
+
+    setStatus(
+      `Erro ao iniciar: ${error.message}`,
+      "error"
     );
-  });
-
-  on(elements.logoutButton, "click", logout);
+  }
 }
 
-async function start() {
-  bindActions();
-  await renderAuthState();
-}
-
-start();
+startApp();
