@@ -1,7 +1,7 @@
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRDsf6AfX6eq3pWQqzkV3mUd20Hj3BwjTMD58Tlx_cXAtnQI-PTKjQm5r4cOGi49CI/exec";
 
 const GITHUB_OWNER = "vonkoln";
-const MAX_REPO_PAGES = 5;
+
 const PLAYLIST_REQUIRED_DATA_FILE = "data.js";
 const PLAYLIST_REQUIRED_FILES_FOLDER = "files";
 
@@ -106,21 +106,7 @@ function clearSession() {
   localStorage.removeItem(STORAGE_KEYS.username);
 }
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-  } finally {
-    window.clearTimeout(timer);
-  }
-}
-
-function createJsonpRequest(params, timeoutMs = 10000) {
+function createJsonpRequest(params, timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
     if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("COLE_AQUI")) {
       reject(new Error("URL do Google Apps Script não configurada no admin.js."));
@@ -243,7 +229,7 @@ async function renderAuthState() {
   elements.playlistManager?.classList.toggle("hidden", !logged);
 
   if (logged) {
-    loadVonkolnRepositories();
+    loadVonkolnRepositories(false);
     loadPlaylists();
   }
 }
@@ -258,7 +244,7 @@ function logout() {
   setStatus(elements.loginStatus, "Sessão encerrada.", "success");
 }
 
-async function loadVonkolnRepositories() {
+async function loadVonkolnRepositories(force = false) {
   if (isLoadingRepos) {
     return;
   }
@@ -268,63 +254,33 @@ async function loadVonkolnRepositories() {
   filteredGithubRepos = [];
   inspectedRepository = null;
 
-  setRepoSelectorMessage("Carregando repositórios...");
-  setStatus(elements.adminStatus, `Buscando repositórios públicos de ${GITHUB_OWNER}...`);
-  setRepoPreview("Carregando repositórios e filtrando apenas playlists válidas...", "info");
+  setRepoSelectorMessage("Carregando playlists...");
+  setStatus(elements.adminStatus, "Buscando playlists filtradas no servidor...");
+  setRepoPreview("Consultando lista cacheada de playlists válidas...", "info");
 
   try {
-    const allRepos = await fetchAllVonkolnRepos();
+    const payload = await createJsonpRequest({
+      action: "listGithubPlaylists",
+      token: getToken(),
+      force: force ? "true" : "false",
+    }, 60000);
 
-    if (!allRepos.length) {
-      setRepoSelectorMessage("Nenhum repositório encontrado");
-      setStatus(elements.adminStatus, "Nenhum repositório público encontrado.", "warning");
-      setRepoPreview("Nenhum repositório público foi encontrado.", "warning");
-      return;
-    }
+    const playlists = Array.isArray(payload.playlists)
+      ? payload.playlists
+      : [];
 
-    setRepoSelectorMessage(`Verificando 0 de ${allRepos.length}...`);
-
-    const validPlaylistRepos = [];
-
-    for (let index = 0; index < allRepos.length; index++) {
-      const repo = allRepos[index];
-      const owner = repo.owner?.login || GITHUB_OWNER;
-      const branch = repo.default_branch || "main";
-
-      setStatus(
-        elements.adminStatus,
-        `Verificando playlists ${index + 1} de ${allRepos.length}...`
-      );
-
-      setRepoSelectorMessage(`Verificando ${index + 1} de ${allRepos.length}...`);
-
-      try {
-        const isPlaylist = await repoLooksLikePlaylist(owner, repo.name, branch);
-
-        if (isPlaylist) {
-          validPlaylistRepos.push(repo);
-
-          githubRepos = validPlaylistRepos
-            .map(normalizeGithubRepo)
-            .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-
-          filteredGithubRepos = [...githubRepos];
-
-          renderRepoSelector();
-
-          setRepoPreview(
-            `${githubRepos.length} playlist(s) válida(s) encontrada(s) até agora.`,
-            "success"
-          );
-        }
-      } catch (error) {
-        console.warn(`Falha ao verificar ${owner}/${repo.name}:`, error);
-      }
-    }
-
-    githubRepos = validPlaylistRepos
-      .map(normalizeGithubRepo)
-      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    githubRepos = playlists.map((playlist) => ({
+      name: playlist.repo,
+      fullName: `${playlist.owner}/${playlist.repo}`,
+      owner: playlist.owner || GITHUB_OWNER,
+      defaultBranch: playlist.branch || "main",
+      description: playlist.description || playlist.name || "",
+      htmlUrl: playlist.repoUrl || `https://github.com/${playlist.owner}/${playlist.repo}`,
+      updatedAt: playlist.updatedAt || "",
+      playlistName: playlist.name || `Playlist ${playlist.repo}`,
+      dataFile: playlist.dataFile || PLAYLIST_REQUIRED_DATA_FILE,
+      filesPath: playlist.filesPath || PLAYLIST_REQUIRED_FILES_FOLDER,
+    }));
 
     filteredGithubRepos = [...githubRepos];
 
@@ -333,19 +289,19 @@ async function loadVonkolnRepositories() {
     if (githubRepos.length) {
       setStatus(
         elements.adminStatus,
-        `${githubRepos.length} playlist(s) válida(s) encontrada(s).`,
+        `${githubRepos.length} playlist(s) válida(s) encontrada(s)${payload.cached ? " em cache" : ""}.`,
         "success"
       );
 
       setRepoPreview(
-        `Lista pronta. Foram exibidos apenas repositórios com <strong>${PLAYLIST_REQUIRED_DATA_FILE}</strong> e pasta <strong>${PLAYLIST_REQUIRED_FILES_FOLDER}/</strong>.`,
+        `Lista pronta. Foram exibidos apenas repositórios de <strong>${GITHUB_OWNER}</strong> com <strong>${PLAYLIST_REQUIRED_DATA_FILE}</strong> e pasta <strong>${PLAYLIST_REQUIRED_FILES_FOLDER}/</strong>. ${payload.cached ? "Resultado vindo do cache." : "Resultado atualizado agora."}`,
         "success"
       );
     } else {
       setRepoSelectorMessage("Nenhuma playlist válida encontrada");
       setStatus(elements.adminStatus, "Nenhuma playlist válida encontrada.", "warning");
       setRepoPreview(
-        `Nenhum repositório válido encontrado. Para aparecer aqui, o repositório precisa conter <strong>${PLAYLIST_REQUIRED_DATA_FILE}</strong> e pasta <strong>${PLAYLIST_REQUIRED_FILES_FOLDER}/</strong>.`,
+        `Nenhuma playlist válida encontrada no repositório ${GITHUB_OWNER}.`,
         "warning"
       );
     }
@@ -356,108 +312,12 @@ async function loadVonkolnRepositories() {
     setStatus(elements.adminStatus, error.message, "error");
 
     setRepoPreview(
-      `Erro ao carregar playlists do GitHub.<br>${error.message}`,
+      `Erro ao carregar playlists.<br>${error.message}`,
       "error"
     );
   } finally {
     isLoadingRepos = false;
   }
-}
-
-function normalizeGithubRepo(repo) {
-  return {
-    name: repo.name,
-    fullName: repo.full_name,
-    owner: repo.owner?.login || GITHUB_OWNER,
-    defaultBranch: repo.default_branch || "main",
-    description: repo.description || "",
-    htmlUrl: repo.html_url,
-    updatedAt: repo.updated_at || "",
-  };
-}
-
-async function fetchAllVonkolnRepos() {
-  const repos = [];
-  let page = 1;
-
-  while (page <= MAX_REPO_PAGES) {
-    const url = `https://api.github.com/users/${GITHUB_OWNER}/repos?per_page=100&page=${page}&sort=updated`;
-
-    const response = await fetchWithTimeout(url, {
-      headers: {
-        "Accept": "application/vnd.github+json",
-      },
-    });
-
-    if (response.status === 403) {
-      throw new Error("Limite temporário da API do GitHub atingido. Aguarde alguns minutos e tente novamente.");
-    }
-
-    if (!response.ok) {
-      throw new Error(`Não foi possível buscar repositórios do GitHub. HTTP ${response.status}.`);
-    }
-
-    const data = await response.json();
-
-    if (!Array.isArray(data) || !data.length) {
-      break;
-    }
-
-    repos.push(...data);
-
-    if (data.length < 100) {
-      break;
-    }
-
-    page += 1;
-  }
-
-  return repos.filter((repo) => !repo.archived);
-}
-
-async function repoLooksLikePlaylist(owner, repo, branch) {
-  const tree = await fetchGithubTree(owner, repo, branch);
-
-  if (!tree.length) {
-    return false;
-  }
-
-  const hasDataJs = tree.some((item) => {
-    return item.type === "blob" &&
-      item.path === PLAYLIST_REQUIRED_DATA_FILE;
-  });
-
-  const hasFilesFolder = tree.some((item) => {
-    return item.type === "tree" &&
-      (
-        item.path === PLAYLIST_REQUIRED_FILES_FOLDER ||
-        item.path.startsWith(`${PLAYLIST_REQUIRED_FILES_FOLDER}/`)
-      );
-  });
-
-  return hasDataJs && hasFilesFolder;
-}
-
-async function fetchGithubTree(owner, repo, branch) {
-  const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`;
-
-  const response = await fetchWithTimeout(url, {
-    headers: {
-      "Accept": "application/vnd.github+json",
-    },
-  });
-
-  if (response.status === 403) {
-    throw new Error("Limite temporário da API do GitHub atingido.");
-  }
-
-  if (!response.ok) {
-    return [];
-  }
-
-  const data = await response.json();
-
-  return Array.isArray(data.tree) ? data.tree : [];
 }
 
 function renderRepoSelector() {
@@ -484,8 +344,8 @@ function renderRepoSelector() {
     const option = document.createElement("option");
 
     option.value = repo.name;
-    option.textContent = repo.description
-      ? `${repo.name} — ${repo.description}`
+    option.textContent = repo.playlistName && repo.playlistName !== repo.name
+      ? `${repo.playlistName} — ${repo.name}`
       : repo.name;
 
     elements.repoSelector.appendChild(option);
@@ -503,7 +363,8 @@ function filterRepoList() {
     filteredGithubRepos = githubRepos.filter((repo) => {
       return repo.name.toLowerCase().includes(query) ||
         repo.fullName.toLowerCase().includes(query) ||
-        repo.description.toLowerCase().includes(query);
+        repo.description.toLowerCase().includes(query) ||
+        repo.playlistName.toLowerCase().includes(query);
     });
   }
 
@@ -534,57 +395,6 @@ function createPlaylistId(owner, repo) {
     .replace(/^-+|-+$/g, "");
 }
 
-async function fetchGithubText(owner, repo, branch, path) {
-  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
-
-  const response = await fetchWithTimeout(url, {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    return "";
-  }
-
-  return response.text();
-}
-
-async function checkGithubPath(owner, repo, branch, path) {
-  const tree = await fetchGithubTree(owner, repo, branch);
-
-  return tree.some((item) => {
-    return item.path === path || item.path.startsWith(`${path}/`);
-  });
-}
-
-function extractPlaylistNameFromReadme(readme, fallbackName) {
-  if (!readme) {
-    return fallbackName;
-  }
-
-  const heading = readme
-    .split("\n")
-    .map((line) => line.trim())
-    .find((line) => line.startsWith("#"));
-
-  if (!heading) {
-    return fallbackName;
-  }
-
-  const cleanHeading = heading
-    .replace(/^#+\s*/, "")
-    .trim();
-
-  if (!cleanHeading || /^playlist\s*d\.?$/i.test(cleanHeading)) {
-    return fallbackName;
-  }
-
-  if (/^playlist/i.test(cleanHeading)) {
-    return cleanHeading;
-  }
-
-  return `Playlist ${cleanHeading}`;
-}
-
 async function inspectGithubRepository() {
   const selectedRepo = getSelectedRepo();
 
@@ -597,18 +407,7 @@ async function inspectGithubRepository() {
   const owner = selectedRepo.owner;
   const repo = selectedRepo.name;
   const branch = elements.playlistBranch?.value.trim() || selectedRepo.defaultBranch || "main";
-
-  setStatus(elements.adminStatus, `Verificando ${owner}/${repo}...`);
-  setRepoPreview(`Verificando estrutura de <strong>${owner}/${repo}</strong>...`, "info");
-
-  const [readme, dataJs, hasFilesFolder] = await Promise.all([
-    fetchGithubText(owner, repo, branch, "README.md"),
-    fetchGithubText(owner, repo, branch, PLAYLIST_REQUIRED_DATA_FILE),
-    checkGithubPath(owner, repo, branch, PLAYLIST_REQUIRED_FILES_FOLDER),
-  ]);
-
-  const fallbackName = `Playlist ${repo.replace(/[-_]+/g, " ")}`;
-  const name = extractPlaylistNameFromReadme(readme, fallbackName);
+  const name = elements.playlistName?.value.trim() || selectedRepo.playlistName || `Playlist ${repo}`;
 
   if (elements.playlistName) {
     elements.playlistName.value = name;
@@ -618,37 +417,19 @@ async function inspectGithubRepository() {
     elements.playlistBranch.value = branch;
   }
 
-  if (!dataJs) {
-    inspectedRepository = null;
-    setStatus(elements.adminStatus, "Este repositório não possui data.js.", "error");
-    setRepoPreview(
-      `O repositório <strong>${owner}/${repo}</strong> não parece ser uma playlist válida porque não encontrei <strong>${PLAYLIST_REQUIRED_DATA_FILE}</strong>.`,
-      "error"
-    );
-    return null;
-  }
-
-  if (!hasFilesFolder) {
-    inspectedRepository = null;
-    setStatus(elements.adminStatus, "Este repositório não possui pasta files.", "error");
-    setRepoPreview(
-      `O repositório <strong>${owner}/${repo}</strong> possui data.js, mas não encontrei a pasta <strong>${PLAYLIST_REQUIRED_FILES_FOLDER}</strong>.`,
-      "error"
-    );
-    return null;
-  }
-
   inspectedRepository = {
     owner,
     repo,
     branch,
     name,
     repoUrl: selectedRepo.htmlUrl || `https://github.com/${owner}/${repo}`,
+    dataFile: selectedRepo.dataFile || PLAYLIST_REQUIRED_DATA_FILE,
+    filesPath: selectedRepo.filesPath || PLAYLIST_REQUIRED_FILES_FOLDER,
   };
 
   setStatus(elements.adminStatus, `Playlist válida encontrada: ${name}`, "success");
   setRepoPreview(
-    `Playlist válida: <strong>${name}</strong><br>Repositório: ${owner}/${repo}<br>Branch: ${branch}<br>Arquivos esperados: ${PLAYLIST_REQUIRED_DATA_FILE} + ${PLAYLIST_REQUIRED_FILES_FOLDER}/`,
+    `Playlist válida: <strong>${name}</strong><br>Repositório: ${owner}/${repo}<br>Branch: ${branch}<br>Arquivos esperados: ${inspectedRepository.dataFile} + ${inspectedRepository.filesPath}/`,
     "success"
   );
 
@@ -679,8 +460,8 @@ async function savePlaylistFromForm(event) {
       owner: inspected.owner,
       repo: inspected.repo,
       branch: inspected.branch,
-      dataFile: PLAYLIST_REQUIRED_DATA_FILE,
-      filesPath: PLAYLIST_REQUIRED_FILES_FOLDER,
+      dataFile: inspected.dataFile || PLAYLIST_REQUIRED_DATA_FILE,
+      filesPath: inspected.filesPath || PLAYLIST_REQUIRED_FILES_FOLDER,
       repoUrl: inspected.repoUrl,
       hidden: "false",
     });
@@ -838,7 +619,7 @@ function bindActions() {
     }
   });
 
-  on(elements.refreshRepos, "click", loadVonkolnRepositories);
+  on(elements.refreshRepos, "click", () => loadVonkolnRepositories(true));
   on(elements.repoSearch, "input", filterRepoList);
 
   on(elements.repoSelector, "change", () => {
@@ -856,7 +637,7 @@ function bindActions() {
     }
 
     if (elements.playlistName) {
-      elements.playlistName.value = `Playlist ${selectedRepo.name.replace(/[-_]+/g, " ")}`;
+      elements.playlistName.value = selectedRepo.playlistName || `Playlist ${selectedRepo.name.replace(/[-_]+/g, " ")}`;
     }
 
     setRepoPreview(
