@@ -38,6 +38,7 @@ const elements = {
 let githubRepos = [];
 let filteredGithubRepos = [];
 let inspectedRepository = null;
+let isLoadingRepos = false;
 
 function on(element, eventName, handler) {
   if (!element) {
@@ -67,6 +68,20 @@ function setRepoPreview(message, type = "info") {
   elements.repoPreview.dataset.type = type;
 }
 
+function setRepoSelectorMessage(message) {
+  if (!elements.repoSelector) {
+    return;
+  }
+
+  elements.repoSelector.innerHTML = "";
+
+  const option = document.createElement("option");
+  option.value = "";
+  option.textContent = message;
+
+  elements.repoSelector.appendChild(option);
+}
+
 async function sha256(text) {
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
@@ -89,6 +104,20 @@ function setSession(token, username) {
 function clearSession() {
   localStorage.removeItem(STORAGE_KEYS.token);
   localStorage.removeItem(STORAGE_KEYS.username);
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timer);
+  }
 }
 
 function createJsonpRequest(params, timeoutMs = 10000) {
@@ -214,10 +243,8 @@ async function renderAuthState() {
   elements.playlistManager?.classList.toggle("hidden", !logged);
 
   if (logged) {
-    await Promise.allSettled([
-      loadVonkolnRepositories(),
-      loadPlaylists(),
-    ]);
+    loadVonkolnRepositories();
+    loadPlaylists();
   }
 }
 
@@ -232,47 +259,91 @@ function logout() {
 }
 
 async function loadVonkolnRepositories() {
+  if (isLoadingRepos) {
+    return;
+  }
+
+  isLoadingRepos = true;
+  githubRepos = [];
+  filteredGithubRepos = [];
+  inspectedRepository = null;
+
+  setRepoSelectorMessage("Carregando repositórios...");
   setStatus(elements.adminStatus, `Buscando repositórios públicos de ${GITHUB_OWNER}...`);
   setRepoPreview("Carregando repositórios e filtrando apenas playlists válidas...", "info");
 
   try {
     const allRepos = await fetchAllVonkolnRepos();
 
-    setStatus(
-      elements.adminStatus,
-      `${allRepos.length} repositório(s) encontrado(s). Verificando quais são playlists...`
-    );
+    if (!allRepos.length) {
+      setRepoSelectorMessage("Nenhum repositório encontrado");
+      setStatus(elements.adminStatus, "Nenhum repositório público encontrado.", "warning");
+      setRepoPreview("Nenhum repositório público foi encontrado.", "warning");
+      return;
+    }
 
-    const validPlaylistRepos = await filterOnlyPlaylistRepos(allRepos);
+    setRepoSelectorMessage(`Verificando 0 de ${allRepos.length}...`);
+
+    const validPlaylistRepos = [];
+
+    for (let index = 0; index < allRepos.length; index++) {
+      const repo = allRepos[index];
+      const owner = repo.owner?.login || GITHUB_OWNER;
+      const branch = repo.default_branch || "main";
+
+      setStatus(
+        elements.adminStatus,
+        `Verificando playlists ${index + 1} de ${allRepos.length}...`
+      );
+
+      setRepoSelectorMessage(`Verificando ${index + 1} de ${allRepos.length}...`);
+
+      try {
+        const isPlaylist = await repoLooksLikePlaylist(owner, repo.name, branch);
+
+        if (isPlaylist) {
+          validPlaylistRepos.push(repo);
+
+          githubRepos = validPlaylistRepos
+            .map(normalizeGithubRepo)
+            .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+
+          filteredGithubRepos = [...githubRepos];
+
+          renderRepoSelector();
+
+          setRepoPreview(
+            `${githubRepos.length} playlist(s) válida(s) encontrada(s) até agora.`,
+            "success"
+          );
+        }
+      } catch (error) {
+        console.warn(`Falha ao verificar ${owner}/${repo.name}:`, error);
+      }
+    }
 
     githubRepos = validPlaylistRepos
-      .map((repo) => ({
-        name: repo.name,
-        fullName: repo.full_name,
-        owner: repo.owner?.login || GITHUB_OWNER,
-        defaultBranch: repo.default_branch || "main",
-        description: repo.description || "",
-        htmlUrl: repo.html_url,
-        updatedAt: repo.updated_at || "",
-      }))
+      .map(normalizeGithubRepo)
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
     filteredGithubRepos = [...githubRepos];
 
     renderRepoSelector();
 
-    setStatus(
-      elements.adminStatus,
-      `${githubRepos.length} playlist(s) válida(s) encontrada(s).`,
-      "success"
-    );
-
     if (githubRepos.length) {
+      setStatus(
+        elements.adminStatus,
+        `${githubRepos.length} playlist(s) válida(s) encontrada(s).`,
+        "success"
+      );
+
       setRepoPreview(
-        `Lista filtrada. Foram exibidos apenas repositórios com <strong>${PLAYLIST_REQUIRED_DATA_FILE}</strong> e pasta <strong>${PLAYLIST_REQUIRED_FILES_FOLDER}/</strong>.`,
+        `Lista pronta. Foram exibidos apenas repositórios com <strong>${PLAYLIST_REQUIRED_DATA_FILE}</strong> e pasta <strong>${PLAYLIST_REQUIRED_FILES_FOLDER}/</strong>.`,
         "success"
       );
     } else {
+      setRepoSelectorMessage("Nenhuma playlist válida encontrada");
+      setStatus(elements.adminStatus, "Nenhuma playlist válida encontrada.", "warning");
       setRepoPreview(
         `Nenhum repositório válido encontrado. Para aparecer aqui, o repositório precisa conter <strong>${PLAYLIST_REQUIRED_DATA_FILE}</strong> e pasta <strong>${PLAYLIST_REQUIRED_FILES_FOLDER}/</strong>.`,
         "warning"
@@ -280,9 +351,29 @@ async function loadVonkolnRepositories() {
     }
   } catch (error) {
     console.error(error);
+
+    setRepoSelectorMessage("Erro ao carregar playlists");
     setStatus(elements.adminStatus, error.message, "error");
-    setRepoPreview("Erro ao carregar e filtrar playlists do GitHub.", "error");
+
+    setRepoPreview(
+      `Erro ao carregar playlists do GitHub.<br>${error.message}`,
+      "error"
+    );
+  } finally {
+    isLoadingRepos = false;
   }
+}
+
+function normalizeGithubRepo(repo) {
+  return {
+    name: repo.name,
+    fullName: repo.full_name,
+    owner: repo.owner?.login || GITHUB_OWNER,
+    defaultBranch: repo.default_branch || "main",
+    description: repo.description || "",
+    htmlUrl: repo.html_url,
+    updatedAt: repo.updated_at || "",
+  };
 }
 
 async function fetchAllVonkolnRepos() {
@@ -292,14 +383,18 @@ async function fetchAllVonkolnRepos() {
   while (page <= MAX_REPO_PAGES) {
     const url = `https://api.github.com/users/${GITHUB_OWNER}/repos?per_page=100&page=${page}&sort=updated`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       headers: {
         "Accept": "application/vnd.github+json",
       },
     });
 
+    if (response.status === 403) {
+      throw new Error("Limite temporário da API do GitHub atingido. Aguarde alguns minutos e tente novamente.");
+    }
+
     if (!response.ok) {
-      throw new Error("Não foi possível buscar a lista de repositórios do GitHub.");
+      throw new Error(`Não foi possível buscar repositórios do GitHub. HTTP ${response.status}.`);
     }
 
     const data = await response.json();
@@ -320,52 +415,49 @@ async function fetchAllVonkolnRepos() {
   return repos.filter((repo) => !repo.archived);
 }
 
-async function filterOnlyPlaylistRepos(repos) {
-  const validRepos = [];
-  const batchSize = 8;
+async function repoLooksLikePlaylist(owner, repo, branch) {
+  const tree = await fetchGithubTree(owner, repo, branch);
 
-  for (let start = 0; start < repos.length; start += batchSize) {
-    const batch = repos.slice(start, start + batchSize);
-
-    setStatus(
-      elements.adminStatus,
-      `Verificando playlists ${Math.min(start + batch.length, repos.length)} de ${repos.length}...`
-    );
-
-    const results = await Promise.allSettled(
-      batch.map(async (repo) => {
-        const owner = repo.owner?.login || GITHUB_OWNER;
-        const branch = repo.default_branch || "main";
-
-        const isPlaylist = await repoLooksLikePlaylist(owner, repo.name, branch);
-
-        return {
-          repo,
-          isPlaylist,
-        };
-      })
-    );
-
-    results.forEach((result) => {
-      if (
-        result.status === "fulfilled" &&
-        result.value.isPlaylist
-      ) {
-        validRepos.push(result.value.repo);
-      }
-    });
+  if (!tree.length) {
+    return false;
   }
 
-  return validRepos;
-}
+  const hasDataJs = tree.some((item) => {
+    return item.type === "blob" &&
+      item.path === PLAYLIST_REQUIRED_DATA_FILE;
+  });
 
-async function repoLooksLikePlaylist(owner, repo, branch) {
-  const [hasDataJs, hasFilesFolder] = await Promise.all([
-    checkGithubPath(owner, repo, branch, PLAYLIST_REQUIRED_DATA_FILE),
-    checkGithubPath(owner, repo, branch, PLAYLIST_REQUIRED_FILES_FOLDER),
-  ]);
+  const hasFilesFolder = tree.some((item) => {
+    return item.type === "tree" &&
+      (
+        item.path === PLAYLIST_REQUIRED_FILES_FOLDER ||
+        item.path.startsWith(`${PLAYLIST_REQUIRED_FILES_FOLDER}/`)
+      );
+  });
 
   return hasDataJs && hasFilesFolder;
+}
+
+async function fetchGithubTree(owner, repo, branch) {
+  const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`;
+
+  const response = await fetchWithTimeout(url, {
+    headers: {
+      "Accept": "application/vnd.github+json",
+    },
+  });
+
+  if (response.status === 403) {
+    throw new Error("Limite temporário da API do GitHub atingido.");
+  }
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = await response.json();
+
+  return Array.isArray(data.tree) ? data.tree : [];
 }
 
 function renderRepoSelector() {
@@ -445,7 +537,7 @@ function createPlaylistId(owner, repo) {
 async function fetchGithubText(owner, repo, branch, path) {
   const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     cache: "no-store",
   });
 
@@ -457,19 +549,11 @@ async function fetchGithubText(owner, repo, branch, path) {
 }
 
 async function checkGithubPath(owner, repo, branch, path) {
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`;
+  const tree = await fetchGithubTree(owner, repo, branch);
 
-  const response = await fetch(url, {
-    headers: {
-      "Accept": "application/vnd.github+json",
-    },
+  return tree.some((item) => {
+    return item.path === path || item.path.startsWith(`${path}/`);
   });
-
-  if (!response.ok) {
-    return false;
-  }
-
-  return true;
 }
 
 function extractPlaylistNameFromReadme(readme, fallbackName) {
